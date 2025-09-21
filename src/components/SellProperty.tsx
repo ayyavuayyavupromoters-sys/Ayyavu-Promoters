@@ -3,12 +3,6 @@ import { ArrowLeft, Upload, X, MapPin, Home, Ruler, Phone, Mail, User, IndianRup
 import { supabase } from '../lib/supabase';
 
 const SellProperty = () => {
-  const [user, setUser] = useState<any>(null);
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -23,48 +17,6 @@ const SellProperty = () => {
   const [images, setImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [submitLoading, setSubmitLoading] = useState(false);
-
-  useEffect(() => {
-    // Check if user is logged in
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const handleAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      if (authMode === 'login') {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-        });
-        if (error) throw error;
-      }
-      setShowAuthModal(false);
-      setEmail('');
-      setPassword('');
-    } catch (error: any) {
-      alert(error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -92,10 +44,6 @@ const SellProperty = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) {
-      setShowAuthModal(true);
-      return;
-    }
 
     setSubmitLoading(true);
     try {
@@ -122,7 +70,7 @@ const SellProperty = () => {
         .insert({
           ...formData,
           images: imageUrls,
-          user_id: user.id,
+          user_id: null,
           status: 'pending'
         });
 
@@ -177,24 +125,9 @@ const SellProperty = () => {
               Sell Your Property
             </h1>
             <div className="flex items-center space-x-4">
-              {user ? (
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-300">Welcome, {user.email}</span>
-                  <button
-                    onClick={() => supabase.auth.signOut()}
-                    className="text-red-400 hover:text-white text-sm transition-colors duration-300"
-                  >
-                    Logout
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setShowAuthModal(true)}
-                  className="bg-red-600 hover:bg-transparent hover:border-2 hover:border-red-400 hover:text-red-400 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 hover:scale-105 border-2 border-transparent"
-                >
-                  Login
-                </button>
-              )}
+              <div className="text-sm text-gray-300">
+                Submit your property for review
+              </div>
             </div>
           </div>
         </div>
@@ -408,60 +341,6 @@ const SellProperty = () => {
           </form>
         </div>
       </div>
-
-      {/* Auth Modal */}
-      {showAuthModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 rounded-2xl p-8 max-w-md w-full border border-red-600/30">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-2xl font-bold">
-                {authMode === 'login' ? 'Login' : 'Sign Up'}
-              </h3>
-              <button
-                onClick={() => setShowAuthModal(false)}
-                className="text-gray-400 hover:text-white"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-
-            <form onSubmit={handleAuth} className="space-y-4">
-              <input
-                type="email"
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg focus:outline-none focus:border-red-400 text-white"
-              />
-              <input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg focus:outline-none focus:border-red-400 text-white"
-              />
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-red-600 hover:bg-transparent hover:border-2 hover:border-red-400 hover:text-red-400 disabled:bg-gray-600 disabled:hover:bg-gray-600 disabled:hover:border-gray-600 disabled:hover:text-white text-white py-3 rounded-lg font-semibold transition-all duration-300 hover:scale-105 border-2 border-transparent"
-              >
-                {loading ? 'Loading...' : (authMode === 'login' ? 'Login' : 'Sign Up')}
-              </button>
-            </form>
-
-            <div className="mt-4 text-center">
-              <button
-                onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}
-                className="text-red-400 hover:text-red-300"
-              >
-                {authMode === 'login' ? "Don't have an account? Sign up" : "Already have an account? Login"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
