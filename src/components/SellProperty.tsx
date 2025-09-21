@@ -335,7 +335,7 @@ const SellProperty = () => {
                     value={formData.contact_phone}
                     onChange={(e) => setFormData(prev => ({ ...prev, contact_phone: e.target.value }))}
                     className="w-full pl-10 pr-4 py-3 bg-gray-900/80 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
-                    placeholder="+91 98765 43210"
+                    placeholder="+91 1234567890"
                   />
                 </div>
               </div>
