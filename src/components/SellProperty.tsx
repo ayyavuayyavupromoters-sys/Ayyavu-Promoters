@@ -277,7 +277,7 @@ const SellProperty = () => {
                   value={formData.area}
                   onChange={(e) => setFormData(prev => ({ ...prev, area: e.target.value }))}
                   className="w-full px-4 py-3 bg-gray-900/80 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
-                  placeholder="e.g., 300 sq yards"
+                  placeholder="e.g., 3 cent"
                 />
               </div>
               <div>
