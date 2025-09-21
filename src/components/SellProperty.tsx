@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Upload, X, MapPin, Home, Ruler, Phone, Mail, User, DollarSign, Building } from 'lucide-react';
+import { ArrowLeft, Upload, X, MapPin, Home, Ruler, Phone, Mail, User, IndianRupee, Building } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 const SellProperty = () => {
@@ -255,7 +255,7 @@ const SellProperty = () => {
               <div>
                 <label className="block text-sm font-medium mb-2">Price</label>
                 <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <IndianRupee className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                   <input
                     type="text"
                     required
