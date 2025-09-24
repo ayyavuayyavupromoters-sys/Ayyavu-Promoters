@@ -1,27 +1,56 @@
 import React from 'react';
-import { Building, Home, Key, Users } from 'lucide-react';
+import { Building, Home, Key, Users, MapPin, TrendingUp } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const Services = () => {
+  const navigate = useNavigate();
+
+  const handleViewResidential = () => {
+    navigate('/properties');
+  };
+
+  const handleViewCommercial = () => {
+    navigate('/properties');
+  };
+
   const services = [
     {
       icon: Building,
       title: "Residential Projects",
-      description: "Premium apartments and villas designed for modern living with world-class amenities."
+      description: "Premium apartments and villas designed for modern living with world-class amenities.",
+      hasViewButton: true,
+      onView: handleViewResidential
     },
     {
       icon: Home,
       title: "Commercial Spaces",
-      description: "Strategic commercial properties and office spaces in prime locations for your business."
+      description: "Strategic commercial properties and office spaces in prime locations for your business.",
+      hasViewButton: true,
+      onView: handleViewCommercial
+    },
+    {
+      icon: MapPin,
+      title: "Land Development",
+      description: "Expert land acquisition and development services for residential and commercial projects.",
+      hasViewButton: false
+    },
+    {
+      icon: TrendingUp,
+      title: "Market Analysis",
+      description: "Comprehensive market research and property valuation services for informed decisions.",
+      hasViewButton: false
     },
     {
       icon: Key,
       title: "Property Management",
-      description: "Complete property management services from documentation to maintenance."
+      description: "Complete property management services from documentation to maintenance.",
+      hasViewButton: false
     },
     {
       icon: Users,
       title: "Investment Advisory",
-      description: "Expert guidance on real estate investments with market insights and analysis."
+      description: "Expert guidance on real estate investments with market insights and analysis.",
+      hasViewButton: false
     }
   ];
 
@@ -49,18 +78,30 @@ const Services = () => {
             Comprehensive real estate solutions tailored to meet your unique needs and aspirations
           </p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 relative z-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 relative z-10">
           {services.map((service, index) => (
-            <div key={index} className="bg-gradient-to-br from-gray-900 to-red-950/50 p-8 rounded-3xl shadow-lg hover:shadow-2xl border border-red-600/30 hover:border-red-400 transition-all duration-300 backdrop-blur-sm hover:scale-105 hover:-translate-y-2 cursor-pointer">
+            <div key={index} className="bg-gradient-to-br from-gray-900 to-red-950/50 p-8 rounded-3xl shadow-lg hover:shadow-2xl border border-red-600/30 hover:border-red-400 transition-all duration-300 backdrop-blur-sm hover:scale-105 hover:-translate-y-2 cursor-pointer relative overflow-hidden">
               <div className="flex items-center justify-center w-16 h-16 bg-red-600/20 rounded-lg mb-6 mx-auto">
                 <service.icon className="h-8 w-8 text-red-400" />
               </div>
               <h3 className="text-xl font-semibold text-white mb-4 text-center">
                 {service.title}
               </h3>
-              <p className="text-gray-300 text-center leading-relaxed">
+              <p className="text-gray-300 text-center leading-relaxed mb-6">
                 {service.description}
               </p>
+              
+              {service.hasViewButton && (
+                <div className="flex justify-center">
+                  <button
+                    onClick={service.onView}
+                    className="liquid-button relative px-8 py-3 bg-transparent border-2 border-red-400 text-red-400 rounded-full font-semibold transition-all duration-500 hover:text-white overflow-hidden group"
+                  >
+                    <span className="relative z-10">View</span>
+                    <div className="liquid-fill absolute inset-0 bg-red-600 transform scale-0 rounded-full transition-all duration-700 ease-out group-hover:scale-150"></div>
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
