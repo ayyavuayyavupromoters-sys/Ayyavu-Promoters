@@ -31,7 +31,7 @@ const Properties = () => {
     }
   };
 
-  const filteredProperties = properties.filter(property => property.type === activeTab);
+  const filteredProperties = properties.filter(property => property.property_type === activeTab);
 
   const getStatusColor = (status: string) => {
     switch (status) {
