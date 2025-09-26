@@ -1,18 +1,25 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { ArrowLeft, MapPin, Home, Ruler, Calendar, Building } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { PropertyListing } from '../lib/supabase';
 
 
 const Properties = () => {
+  const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<'residential' | 'commercial'>('residential');
   const [properties, setProperties] = useState<PropertyListing[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Check URL parameter for property type
+    const typeParam = searchParams.get('type');
+    if (typeParam === 'residential' || typeParam === 'commercial') {
+      setActiveTab(typeParam);
+    }
     fetchProperties();
-  }, []);
+  }, [searchParams]);
 
   const fetchProperties = async () => {
     try {

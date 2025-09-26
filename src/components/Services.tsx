@@ -6,11 +6,11 @@ const Services = () => {
   const navigate = useNavigate();
 
   const handleViewResidential = () => {
-    navigate('/properties');
+    navigate('/properties?type=residential');
   };
 
   const handleViewCommercial = () => {
-    navigate('/properties');
+    navigate('/properties?type=commercial');
   };
 
   const services = [
@@ -27,18 +27,6 @@ const Services = () => {
       description: "Strategic commercial properties and office spaces in prime locations for your business.",
       hasViewButton: true,
       onView: handleViewCommercial
-    },
-    {
-      icon: MapPin,
-      title: "Land Development",
-      description: "Expert land acquisition and development services for residential and commercial projects.",
-      hasViewButton: false
-    },
-    {
-      icon: TrendingUp,
-      title: "Market Analysis",
-      description: "Comprehensive market research and property valuation services for informed decisions.",
-      hasViewButton: false
     },
     {
       icon: Key,
