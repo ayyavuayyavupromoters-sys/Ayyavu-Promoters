@@ -16,29 +16,33 @@ const Services = () => {
   const services = [
     {
       icon: Building,
-      title: "Residential Projects",
-      description: "Premium apartments and villas designed for modern living with world-class amenities.",
-      hasViewButton: true,
-      onView: handleViewResidential
+      title: "Investment Advisory",
+      description: "Expert guidance on real estate investments with market insights and analysis.",
+      hasViewButton: false,
+      size: "small"
     },
     {
       icon: Home,
+      title: "Residential Projects",
+      description: "Premium apartments and villas designed for modern living with world-class amenities.",
+      hasViewButton: true,
+      onView: handleViewResidential,
+      size: "large"
+    },
+    {
+      icon: Building,
       title: "Commercial Spaces",
       description: "Strategic commercial properties and office spaces in prime locations for your business.",
       hasViewButton: true,
-      onView: handleViewCommercial
+      onView: handleViewCommercial,
+      size: "large"
     },
     {
       icon: Key,
       title: "Property Management",
       description: "Complete property management services from documentation to maintenance.",
-      hasViewButton: false
-    },
-    {
-      icon: Users,
-      title: "Investment Advisory",
-      description: "Expert guidance on real estate investments with market insights and analysis.",
-      hasViewButton: false
+      hasViewButton: false,
+      size: "small"
     }
   ];
 
@@ -66,9 +70,11 @@ const Services = () => {
             Comprehensive real estate solutions tailored to meet your unique needs and aspirations
           </p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 relative z-10">
+        <div className="flex flex-wrap justify-center gap-6 relative z-10">
           {services.map((service, index) => (
-            <div key={index} className="bg-gradient-to-br from-gray-900 to-red-950/50 p-8 rounded-3xl shadow-lg hover:shadow-2xl border border-red-600/30 hover:border-red-400 transition-all duration-300 backdrop-blur-sm hover:scale-105 hover:-translate-y-2 cursor-pointer relative overflow-hidden">
+            <div key={index} className={`bg-gradient-to-br from-gray-900 to-red-950/50 rounded-3xl shadow-lg hover:shadow-2xl border border-red-600/30 hover:border-red-400 transition-all duration-300 backdrop-blur-sm hover:scale-105 hover:-translate-y-2 cursor-pointer relative overflow-hidden ${
+              service.size === 'small' ? 'w-64 p-6' : 'w-80 p-8'
+            }`}>
               <div className="flex items-center justify-center w-16 h-16 bg-red-600/20 rounded-lg mb-6 mx-auto">
                 <service.icon className="h-8 w-8 text-red-400" />
               </div>
