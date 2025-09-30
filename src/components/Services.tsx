@@ -70,10 +70,10 @@ const Services = () => {
             Comprehensive real estate solutions tailored to meet your unique needs and aspirations
           </p>
         </div>
-        <div className="flex flex-wrap justify-center gap-6 relative z-10">
+        <div className="flex justify-center gap-4 relative z-10 overflow-x-auto">
           {services.map((service, index) => (
             <div key={index} className={`bg-gradient-to-br from-gray-900 to-red-950/50 rounded-3xl shadow-lg hover:shadow-2xl border border-red-600/30 hover:border-red-400 transition-all duration-300 backdrop-blur-sm hover:scale-105 hover:-translate-y-2 cursor-pointer relative overflow-hidden ${
-              service.size === 'small' ? 'w-64 p-6' : 'w-80 p-8'
+              service.size === 'small' ? 'w-56 p-5 flex-shrink-0' : 'w-72 p-7 flex-shrink-0'
             }`}>
               <div className="flex items-center justify-center w-16 h-16 bg-red-600/20 rounded-lg mb-6 mx-auto">
                 <service.icon className="h-8 w-8 text-red-400" />
