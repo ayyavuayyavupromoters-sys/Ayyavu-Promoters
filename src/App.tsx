@@ -8,6 +8,7 @@ import Contact from './components/Contact';
 import Footer from './components/Footer';
 import Properties from './components/Properties';
 import SellProperty from './components/SellProperty';
+import AdminPanel from './components/AdminPanel';
 
 const HomePage = () => (
   <>
@@ -28,6 +29,7 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/properties" element={<Properties />} />
           <Route path="/sell" element={<SellProperty />} />
+          <Route path="/admin" element={<AdminPanel />} />
         </Routes>
       </div>
     </Router>
