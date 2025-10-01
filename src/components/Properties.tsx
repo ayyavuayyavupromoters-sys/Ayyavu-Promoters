@@ -8,7 +8,7 @@ import type { PropertyListing } from '../lib/supabase';
 
 const Properties = () => {
   const [searchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState<'residential' | 'commercial'>('residential');
+  const [propertyType, setPropertyType] = useState<'residential' | 'commercial'>('residential');
   const [properties, setProperties] = useState<PropertyListing[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -16,7 +16,7 @@ const Properties = () => {
     // Check URL parameter for property type
     const typeParam = searchParams.get('type');
     if (typeParam === 'residential' || typeParam === 'commercial') {
-      setActiveTab(typeParam);
+      setPropertyType(typeParam);
     }
     fetchProperties();
   }, [searchParams]);
@@ -38,7 +38,7 @@ const Properties = () => {
     }
   };
 
-  const filteredProperties = properties.filter(property => property.property_type === activeTab);
+  const filteredProperties = properties.filter(property => property.property_type === propertyType);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -83,39 +83,9 @@ const Properties = () => {
               <span>Back to Home</span>
             </button>
             <h1 className="text-2xl font-bold bg-gradient-to-r from-yellow-600 via-amber-500 to-yellow-700 bg-clip-text text-transparent">
-              Available Properties
+              {propertyType === 'residential' ? 'Residential Properties' : 'Commercial Properties'}
             </h1>
             <div className="w-24"></div>
-          </div>
-        </div>
-      </div>
-
-      {/* Property Type Tabs */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
-        <div className="flex justify-center">
-          <div className="bg-black/20 backdrop-blur-md rounded-full border border-white/10 p-2">
-            <div className="flex space-x-2">
-              <button
-                onClick={() => setActiveTab('residential')}
-                className={`px-6 py-3 rounded-full font-medium transition-all duration-300 ${
-                  activeTab === 'residential'
-                    ? 'bg-red-600 text-white shadow-lg'
-                    : 'text-white/70 hover:text-white hover:bg-white/10'
-                }`}
-              >
-                Residential
-              </button>
-              <button
-                onClick={() => setActiveTab('commercial')}
-                className={`px-6 py-3 rounded-full font-medium transition-all duration-300 ${
-                  activeTab === 'commercial'
-                    ? 'bg-red-600 text-white shadow-lg'
-                    : 'text-white/70 hover:text-white hover:bg-white/10'
-                }`}
-              >
-                Commercial
-              </button>
-            </div>
           </div>
         </div>
       </div>
@@ -128,7 +98,7 @@ const Properties = () => {
           </div>
         ) : filteredProperties.length === 0 ? (
           <div className="text-center py-12">
-            <div className="text-white text-xl">No {activeTab} properties available at the moment.</div>
+            <div className="text-white text-xl">No {propertyType} properties available at the moment.</div>
             <p className="text-gray-400 mt-2">Check back later for new listings!</p>
           </div>
         ) : (
