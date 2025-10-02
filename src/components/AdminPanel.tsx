@@ -27,7 +27,7 @@ const AdminPanel = () => {
   const [uploadLoading, setUploadLoading] = useState(false);
 
   // Admin password - Change this to your desired password
-  const ADMIN_PASSWORD = 'ayyavu2025admin';
+  const ADMIN_PASSWORD = 'ayyavu2004admin';
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
