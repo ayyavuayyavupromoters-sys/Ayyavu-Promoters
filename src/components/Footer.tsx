@@ -13,12 +13,6 @@ const Footer = () => {
             <p className="text-gray-400">
               © 2025 Ayyavu Promoters. All rights reserved.
             </p>
-            <button
-              onClick={() => window.location.href = '/admin'}
-              className="text-xs text-gray-600 hover:text-gray-400 transition-colors mt-2 opacity-50 hover:opacity-100"
-            >
-              Admin
-            </button>
           </div>
         </div>
       </div>
