@@ -244,17 +244,17 @@ const AdminPanel = () => {
             <h1 className="text-2xl font-bold bg-gradient-to-r from-yellow-600 via-amber-500 to-yellow-700 bg-clip-text text-transparent">
               Admin Panel
             </h1>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-4 flex-shrink-0">
               <button
                 onClick={() => setShowUploadForm(true)}
-                className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-300"
+                className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-300 hover:scale-105 shadow-lg"
               >
                 <Plus className="h-4 w-4" />
-                <span>Add Property</span>
+                <span className="whitespace-nowrap">Add Property</span>
               </button>
               <button
                 onClick={() => setIsAuthenticated(false)}
-                className="text-white/90 hover:text-red-400 transition-all duration-300"
+                className="text-white/90 hover:text-red-400 transition-all duration-300 px-3 py-2 rounded-lg hover:bg-white/10"
               >
                 Logout
               </button>
