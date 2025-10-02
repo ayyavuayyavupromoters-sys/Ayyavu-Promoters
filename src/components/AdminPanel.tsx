@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Eye, Check, X, Calendar, MapPin, Phone, Mail, User } from 'lucide-react';
+import { ArrowLeft, Eye, Check, X, Calendar, MapPin, Phone, Mail, User, Plus, Upload } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { PropertyListing } from '../lib/supabase';
 
@@ -10,6 +10,21 @@ const AdminPanel = () => {
   const [loading, setLoading] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState<PropertyListing | null>(null);
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
+  const [showUploadForm, setShowUploadForm] = useState(false);
+  const [uploadFormData, setUploadFormData] = useState({
+    title: '',
+    description: '',
+    price: '',
+    area: '',
+    location: '',
+    property_type: 'residential' as 'residential' | 'commercial',
+    contact_name: '',
+    contact_phone: '',
+    contact_email: ''
+  });
+  const [uploadImages, setUploadImages] = useState<File[]>([]);
+  const [uploadImagePreviews, setUploadImagePreviews] = useState<string[]>([]);
+  const [uploadLoading, setUploadLoading] = useState(false);
 
   // Admin password - Change this to your desired password
   const ADMIN_PASSWORD = 'ayyavu2025admin';
@@ -27,18 +42,29 @@ const AdminPanel = () => {
   const fetchProperties = async () => {
     setLoading(true);
     try {
-      let query = supabase.from('property_listings').select('*').order('created_at', { ascending: false });
+      console.log('Fetching properties with filter:', filter);
+      
+      let query = supabase
+        .from('property_listings')
+        .select('*')
+        .order('created_at', { ascending: false });
       
       if (filter !== 'all') {
         query = query.eq('status', filter);
       }
 
       const { data, error } = await query;
-      if (error) throw error;
+      
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+      
+      console.log('Fetched properties:', data);
       setProperties(data || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching properties:', error);
-      alert('Error fetching properties');
+      alert('Error fetching properties: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -48,7 +74,10 @@ const AdminPanel = () => {
     try {
       const { error } = await supabase
         .from('property_listings')
-        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .update({ 
+          status: newStatus, 
+          updated_at: new Date().toISOString() 
+        })
         .eq('id', propertyId);
 
       if (error) throw error;
@@ -56,9 +85,95 @@ const AdminPanel = () => {
       alert(`Property ${newStatus} successfully!`);
       fetchProperties();
       setSelectedProperty(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating property:', error);
-      alert('Error updating property status');
+      alert('Error updating property status: ' + error.message);
+    }
+  };
+
+  const handleUploadImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length + uploadImages.length > 5) {
+      alert('Maximum 5 images allowed');
+      return;
+    }
+
+    setUploadImages(prev => [...prev, ...files]);
+    
+    // Create previews
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setUploadImagePreviews(prev => [...prev, e.target?.result as string]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeUploadImage = (index: number) => {
+    setUploadImages(prev => prev.filter((_, i) => i !== index));
+    setUploadImagePreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleAdminUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setUploadLoading(true);
+
+    try {
+      // Upload images to Supabase storage
+      const imageUrls: string[] = [];
+      for (const image of uploadImages) {
+        const fileName = `admin-${Date.now()}-${image.name}`;
+        const { data, error } = await supabase.storage
+          .from('property-images')
+          .upload(fileName, image);
+        
+        if (error) throw error;
+        
+        const { data: { publicUrl } } = supabase.storage
+          .from('property-images')
+          .getPublicUrl(fileName);
+        
+        imageUrls.push(publicUrl);
+      }
+
+      // Insert property listing with approved status
+      const { error } = await supabase
+        .from('property_listings')
+        .insert({
+          ...uploadFormData,
+          images: imageUrls,
+          user_id: null,
+          status: 'approved' // Admin uploads are automatically approved
+        });
+
+      if (error) throw error;
+
+      alert('Property uploaded and approved successfully!');
+      
+      // Reset form
+      setUploadFormData({
+        title: '',
+        description: '',
+        price: '',
+        area: '',
+        location: '',
+        property_type: 'residential',
+        contact_name: '',
+        contact_phone: '',
+        contact_email: ''
+      });
+      setUploadImages([]);
+      setUploadImagePreviews([]);
+      setShowUploadForm(false);
+      
+      // Refresh properties list
+      fetchProperties();
+    } catch (error: any) {
+      console.error('Error uploading property:', error);
+      alert('Error uploading property: ' + error.message);
+    } finally {
+      setUploadLoading(false);
     }
   };
 
@@ -129,12 +244,21 @@ const AdminPanel = () => {
             <h1 className="text-2xl font-bold bg-gradient-to-r from-yellow-600 via-amber-500 to-yellow-700 bg-clip-text text-transparent">
               Admin Panel
             </h1>
-            <button
-              onClick={() => setIsAuthenticated(false)}
-              className="text-white/90 hover:text-red-400 transition-all duration-300"
-            >
-              Logout
-            </button>
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => setShowUploadForm(true)}
+                className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-300"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Add Property</span>
+              </button>
+              <button
+                onClick={() => setIsAuthenticated(false)}
+                className="text-white/90 hover:text-red-400 transition-all duration-300"
+              >
+                Logout
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -161,6 +285,11 @@ const AdminPanel = () => {
           </div>
         </div>
 
+        {/* Debug Info */}
+        <div className="mb-4 text-center text-gray-400 text-sm">
+          Showing {properties.length} properties | Filter: {filter}
+        </div>
+
         {/* Properties Grid */}
         {loading ? (
           <div className="text-center py-12">
@@ -169,6 +298,9 @@ const AdminPanel = () => {
         ) : properties.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-white text-xl">No {filter} properties found.</div>
+            <p className="text-gray-400 mt-2">
+              {filter === 'pending' ? 'No properties waiting for approval.' : `No ${filter} properties available.`}
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -245,6 +377,221 @@ const AdminPanel = () => {
           </div>
         )}
       </div>
+
+      {/* Admin Upload Form Modal */}
+      {showUploadForm && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-gray-900 to-red-950/50 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-red-600/30">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-white">Add New Property (Admin)</h2>
+                <button
+                  onClick={() => setShowUploadForm(false)}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              <form onSubmit={handleAdminUpload} className="space-y-6">
+                {/* Property Type */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">Property Type</label>
+                  <div className="flex justify-center">
+                    <div className="bg-black/5 backdrop-blur-md rounded-full border border-white/5 p-2">
+                      <div className="flex space-x-2">
+                        <button
+                          type="button"
+                          onClick={() => setUploadFormData(prev => ({ ...prev, property_type: 'residential' }))}
+                          className={`px-6 py-3 rounded-full font-medium transition-all duration-300 ${
+                            uploadFormData.property_type === 'residential'
+                              ? 'bg-red-600 text-white shadow-lg'
+                              : 'text-white/70 hover:text-white hover:bg-white/10'
+                          }`}
+                        >
+                          Residential
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setUploadFormData(prev => ({ ...prev, property_type: 'commercial' }))}
+                          className={`px-6 py-3 rounded-full font-medium transition-all duration-300 ${
+                            uploadFormData.property_type === 'commercial'
+                              ? 'bg-red-600 text-white shadow-lg'
+                              : 'text-white/70 hover:text-white hover:bg-white/10'
+                          }`}
+                        >
+                          Commercial
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Basic Details */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Property Title</label>
+                    <input
+                      type="text"
+                      required
+                      value={uploadFormData.title}
+                      onChange={(e) => setUploadFormData(prev => ({ ...prev, title: e.target.value }))}
+                      className="w-full px-4 py-3 bg-gray-900/80 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
+                      placeholder="e.g., Premium Residential Plot"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Price</label>
+                    <input
+                      type="text"
+                      required
+                      value={uploadFormData.price}
+                      onChange={(e) => setUploadFormData(prev => ({ ...prev, price: e.target.value }))}
+                      className="w-full px-4 py-3 bg-gray-900/80 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
+                      placeholder="e.g., ₹2.5 Cr"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Area</label>
+                    <input
+                      type="text"
+                      required
+                      value={uploadFormData.area}
+                      onChange={(e) => setUploadFormData(prev => ({ ...prev, area: e.target.value }))}
+                      className="w-full px-4 py-3 bg-gray-900/80 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
+                      placeholder="e.g., 3 cent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Location</label>
+                    <input
+                      type="text"
+                      required
+                      value={uploadFormData.location}
+                      onChange={(e) => setUploadFormData(prev => ({ ...prev, location: e.target.value }))}
+                      className="w-full px-4 py-3 bg-gray-900/80 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
+                      placeholder="e.g., Jubilee Hills, Hyderabad"
+                    />
+                  </div>
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">Description</label>
+                  <textarea
+                    required
+                    rows={4}
+                    value={uploadFormData.description}
+                    onChange={(e) => setUploadFormData(prev => ({ ...prev, description: e.target.value }))}
+                    className="w-full px-4 py-3 bg-gray-900/80 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white resize-none"
+                    placeholder="Describe the property in detail..."
+                  />
+                </div>
+
+                {/* Contact Details */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Contact Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={uploadFormData.contact_name}
+                      onChange={(e) => setUploadFormData(prev => ({ ...prev, contact_name: e.target.value }))}
+                      className="w-full px-4 py-3 bg-gray-900/80 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
+                      placeholder="Contact person name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Phone</label>
+                    <input
+                      type="tel"
+                      required
+                      value={uploadFormData.contact_phone}
+                      onChange={(e) => setUploadFormData(prev => ({ ...prev, contact_phone: e.target.value }))}
+                      className="w-full px-4 py-3 bg-gray-900/80 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
+                      placeholder="+91 1234567890"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Email</label>
+                    <input
+                      type="email"
+                      required
+                      value={uploadFormData.contact_email}
+                      onChange={(e) => setUploadFormData(prev => ({ ...prev, contact_email: e.target.value }))}
+                      className="w-full px-4 py-3 bg-gray-900/80 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
+                      placeholder="contact@email.com"
+                    />
+                  </div>
+                </div>
+
+                {/* Image Upload */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">Property Images (Max 5)</label>
+                  <div className="border-2 border-dashed border-red-600/30 rounded-lg p-6 text-center hover:border-red-400 transition-colors">
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={handleUploadImageChange}
+                      className="hidden"
+                      id="admin-image-upload"
+                    />
+                    <label htmlFor="admin-image-upload" className="cursor-pointer">
+                      <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-300">Click to upload images or drag and drop</p>
+                      <p className="text-sm text-gray-500 mt-2">PNG, JPG, GIF up to 10MB each</p>
+                    </label>
+                  </div>
+
+                  {/* Image Previews */}
+                  {uploadImagePreviews.length > 0 && (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mt-4">
+                      {uploadImagePreviews.map((preview, index) => (
+                        <div key={index} className="relative">
+                          <img
+                            src={preview}
+                            alt={`Preview ${index + 1}`}
+                            className="w-full h-24 object-cover rounded-lg"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeUploadImage(index)}
+                            className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full p-1 hover:bg-red-700"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Submit Button */}
+                <div className="flex space-x-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowUploadForm(false)}
+                    className="flex-1 py-4 px-6 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-semibold transition-all duration-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={uploadLoading}
+                    className="flex-1 py-4 px-6 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg font-semibold transition-all duration-300"
+                  >
+                    {uploadLoading ? 'Uploading...' : 'Add Property (Auto-Approved)'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Property Detail Modal */}
       {selectedProperty && (
