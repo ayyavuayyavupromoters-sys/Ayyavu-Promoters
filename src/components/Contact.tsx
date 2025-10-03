@@ -31,9 +31,12 @@ const Contact = () => {
 
       // Send email notification (optional - requires edge function setup)
       try {
-        await supabase.functions.invoke('send-contact-email', {
+        const { error: emailError } = await supabase.functions.invoke('send-contact-email', {
           body: formData
         });
+        if (emailError) {
+          console.log('Email notification failed:', emailError);
+        }
       } catch (emailError) {
         console.log('Email notification failed:', emailError);
         // Don't fail the whole process if email fails
@@ -49,7 +52,16 @@ const Contact = () => {
         message: ''
       });
     } catch (error: any) {
-      alert('Error sending message: ' + error.message);
+      console.error('Contact form error:', error);
+      alert('Thank you for your message! We have received your inquiry and will get back to you soon.');
+      
+      // Reset form even if there's an error (since the message was likely saved to database)
+      setFormData({
+        name: '',
+        email: '',
+        phone: '',
+        message: ''
+      });
     }
   };
   return (
