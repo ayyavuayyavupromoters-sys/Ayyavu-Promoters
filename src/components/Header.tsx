@@ -1,5 +1,5 @@
 import React from 'react';
-import { Instagram, MessageCircle, Youtube, Settings } from 'lucide-react';
+import { Instagram, MessageCircle, Youtube, Shield } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const Header = () => {
@@ -24,7 +24,7 @@ const Header = () => {
         className="fixed bottom-6 left-6 z-50 bg-black/30 backdrop-blur-md border border-white/20 rounded-full p-3 hover:bg-white/20 hover:border-white/30 transition-all duration-300 hover:scale-110 shadow-lg hover:shadow-xl"
         title="Admin Panel"
       >
-        <Settings className="h-5 w-5 text-white/80 hover:text-white" />
+        <Shield className="h-5 w-5 text-white/80 hover:text-white" />
       </button>
 
       <div className="bg-black/20 backdrop-blur-md rounded-full border border-white/10 shadow-2xl">
