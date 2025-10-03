@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Eye, Check, X, Calendar, MapPin, Phone, Mail, User, Plus, Upload } from 'lucide-react';
+import { ArrowLeft, Eye, Check, X, Calendar, MapPin, Phone, Mail, User, Plus, Upload, Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { PropertyListing } from '../lib/supabase';
 
@@ -88,6 +88,28 @@ const AdminPanel = () => {
     } catch (error: any) {
       console.error('Error updating property:', error);
       alert('Error updating property status: ' + error.message);
+    }
+  };
+
+  const deleteProperty = async (propertyId: string, propertyTitle: string) => {
+    if (!confirm(`Are you sure you want to delete "${propertyTitle}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('property_listings')
+        .delete()
+        .eq('id', propertyId);
+
+      if (error) throw error;
+      
+      alert('Property deleted successfully!');
+      fetchProperties();
+      setSelectedProperty(null);
+    } catch (error: any) {
+      console.error('Error deleting property:', error);
+      alert('Error deleting property: ' + error.message);
     }
   };
 
@@ -370,6 +392,15 @@ const AdminPanel = () => {
                         </button>
                       </div>
                     )}
+                    
+                    {/* Delete Button - Available for all properties */}
+                    <button
+                      onClick={() => deleteProperty(property.id, property.title)}
+                      className="w-full py-2 px-4 bg-red-800 hover:bg-red-900 text-white rounded-lg font-medium transition-all duration-300 flex items-center justify-center space-x-2 border border-red-600"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <span>Delete Property</span>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -719,6 +750,17 @@ const AdminPanel = () => {
                       </button>
                     </div>
                   )}
+                  
+                  {/* Delete Button in Modal */}
+                  <div className="mt-4 pt-4 border-t border-red-600/30">
+                    <button
+                      onClick={() => deleteProperty(selectedProperty.id, selectedProperty.title)}
+                      className="w-full py-3 px-4 bg-red-800 hover:bg-red-900 text-white rounded-lg font-semibold transition-all duration-300 flex items-center justify-center space-x-2 border border-red-600"
+                    >
+                      <Trash2 className="h-5 w-5" />
+                      <span>Delete Property</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

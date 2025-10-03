@@ -1,7 +1,10 @@
 import React from 'react';
-import { Instagram, MessageCircle, Youtube } from 'lucide-react';
+import { Instagram, MessageCircle, Youtube, Settings } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const Header = () => {
+  const navigate = useNavigate();
+
   // Editable social media links - you can change these URLs
   const socialLinks = {
     instagram: 'https://www.instagram.com/ayyavu_construction?utm_source=qr&igsh=MW94OGlrYjdua2NnZQ==',
@@ -9,8 +12,21 @@ const Header = () => {
     youtube: 'https://youtube.com/@ayyavuconstruction4201?si=xvZCysH0be_Lup9B'
   };
 
+  const handleAdminClick = () => {
+    navigate('/admin');
+  };
+
   return (
     <header className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-4xl px-4">
+      {/* Admin Button - Top Left */}
+      <button
+        onClick={handleAdminClick}
+        className="fixed top-4 left-4 z-50 bg-black/20 backdrop-blur-md border border-white/10 rounded-full p-2 hover:bg-white/10 hover:border-white/20 transition-all duration-300 hover:scale-110"
+        title="Admin Panel"
+      >
+        <Settings className="h-4 w-4 text-white/70 hover:text-white" />
+      </button>
+
       <div className="bg-black/20 backdrop-blur-md rounded-full border border-white/10 shadow-2xl">
         <div className="flex justify-between items-center py-2 px-4">
           {/* Social Media Icons */}
