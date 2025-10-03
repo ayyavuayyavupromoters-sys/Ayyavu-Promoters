@@ -18,13 +18,13 @@ const Header = () => {
 
   return (
     <header className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-4xl px-4">
-      {/* Admin Button - Top Left */}
+      {/* Admin Button - Bottom Left Fixed */}
       <button
         onClick={handleAdminClick}
-        className="fixed top-4 left-4 z-50 bg-black/20 backdrop-blur-md border border-white/10 rounded-full p-2 hover:bg-white/10 hover:border-white/20 transition-all duration-300 hover:scale-110"
+        className="fixed bottom-6 left-6 z-50 bg-black/30 backdrop-blur-md border border-white/20 rounded-full p-3 hover:bg-white/20 hover:border-white/30 transition-all duration-300 hover:scale-110 shadow-lg hover:shadow-xl"
         title="Admin Panel"
       >
-        <Settings className="h-4 w-4 text-white/70 hover:text-white" />
+        <Settings className="h-5 w-5 text-white/80 hover:text-white" />
       </button>
 
       <div className="bg-black/20 backdrop-blur-md rounded-full border border-white/10 shadow-2xl">
