@@ -9,6 +9,7 @@ const Contact = () => {
     phone: '',
     message: ''
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isFormValid = formData.name && formData.email && formData.phone && formData.message;
 
@@ -21,6 +22,7 @@ const Contact = () => {
     e.preventDefault();
     if (!isFormValid) return;
 
+    setIsSubmitting(true);
     try {
       // Save to database
       const { error: dbError } = await supabase
@@ -62,6 +64,8 @@ const Contact = () => {
         phone: '',
         message: ''
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
   return (
@@ -172,14 +176,14 @@ const Contact = () => {
               <div className="relative group">
                 <button
                   type="submit"
+                  disabled={!isFormValid || isSubmitting}
                   className={`w-full py-4 px-6 rounded-2xl font-semibold transition-all duration-500 backdrop-blur-md ${
-                    isFormValid 
+                    isFormValid && !isSubmitting
                       ? 'bg-gradient-to-r from-red-600/80 to-red-500/80 hover:from-red-500 hover:to-red-400 text-white shadow-lg hover:shadow-xl border border-red-400/30 hover:border-red-300' 
                       : 'bg-white/5 hover:bg-gradient-to-r hover:from-red-600/60 hover:to-red-500/60 text-white/60 hover:text-white border border-white/10 hover:border-red-400/50'
                   } hover:scale-105`}
-                  disabled={!isFormValid}
                 >
-                  Send Message
+                  {isSubmitting ? 'Sending...' : 'Send Message'}
                 </button>
               </div>
             </form>

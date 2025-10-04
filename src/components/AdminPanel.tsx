@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Eye, Check, X, Calendar, MapPin, Phone, Mail, User, Plus, Upload, Trash2 } from 'lucide-react';
+import { ArrowLeft, Eye, Check, X, Calendar, MapPin, Phone, Mail, User, Plus, Upload, Trash2, Edit } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { PropertyListing } from '../lib/supabase';
 
@@ -110,6 +110,99 @@ const AdminPanel = () => {
     } catch (error: any) {
       console.error('Error deleting property:', error);
       alert('Error deleting property: ' + error.message);
+    }
+  };
+
+  const handleEditProperty = (property: PropertyListing) => {
+    setEditingProperty(property);
+    setEditFormData({
+      title: property.title,
+      description: property.description,
+      price: property.price,
+      area: property.area,
+      location: property.location,
+      property_type: property.property_type,
+      contact_name: property.contact_name,
+      contact_phone: property.contact_phone,
+      contact_email: property.contact_email
+    });
+    setEditImages([]);
+    setEditImagePreviews([]);
+  };
+
+  const handleEditImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length + editImages.length > 5) {
+      alert('Maximum 5 images allowed');
+      return;
+    }
+
+    setEditImages(prev => [...prev, ...files]);
+    
+    // Create previews
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setEditImagePreviews(prev => [...prev, e.target?.result as string]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeEditImage = (index: number) => {
+    setEditImages(prev => prev.filter((_, i) => i !== index));
+    setEditImagePreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleUpdateProperty = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProperty) return;
+
+    setEditLoading(true);
+    try {
+      let imageUrls = editingProperty.images || [];
+      
+      // Upload new images if any
+      if (editImages.length > 0) {
+        const newImageUrls: string[] = [];
+        for (const image of editImages) {
+          const fileName = `edit-${Date.now()}-${image.name}`;
+          const { data, error } = await supabase.storage
+            .from('property-images')
+            .upload(fileName, image);
+          
+          if (error) throw error;
+          
+          const { data: { publicUrl } } = supabase.storage
+            .from('property-images')
+            .getPublicUrl(fileName);
+          
+          newImageUrls.push(publicUrl);
+        }
+        // Replace old images with new ones
+        imageUrls = newImageUrls;
+      }
+
+      // Update property
+      const { error } = await supabase
+        .from('property_listings')
+        .update({
+          ...editFormData,
+          images: imageUrls,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', editingProperty.id);
+
+      if (error) throw error;
+
+      alert('Property updated successfully!');
+      setEditingProperty(null);
+      fetchProperties();
+    } catch (error: any) {
+      console.error('Error updating property:', error);
+      alert('Error updating property: ' + error.message);
+    } finally {
+      setEditLoading(false);
     }
   };
 
