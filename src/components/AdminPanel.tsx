@@ -426,6 +426,243 @@ const AdminPanel = () => {
         )}
       </div>
 
+      {/* Edit Property Modal */}
+      {editingProperty && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-gray-900 to-red-950/50 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-red-600/30">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-white">Edit Property</h2>
+                <button
+                  onClick={() => setEditingProperty(null)}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              <form onSubmit={handleEditSubmit} className="space-y-6">
+                {/* Property Type */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">Property Type</label>
+                  <div className="flex justify-center">
+                    <div className="bg-black/5 backdrop-blur-md rounded-full border border-white/5 p-2">
+                      <div className="flex space-x-2">
+                        <button
+                          type="button"
+                          onClick={() => setEditFormData(prev => ({ ...prev, property_type: 'residential' }))}
+                          className={`px-6 py-3 rounded-full font-medium transition-all duration-300 ${
+                            editFormData.property_type === 'residential'
+                              ? 'bg-red-600 text-white shadow-lg'
+                              : 'text-white/70 hover:text-white hover:bg-white/10'
+                          }`}
+                        >
+                          Residential
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditFormData(prev => ({ ...prev, property_type: 'commercial' }))}
+                          className={`px-6 py-3 rounded-full font-medium transition-all duration-300 ${
+                            editFormData.property_type === 'commercial'
+                              ? 'bg-red-600 text-white shadow-lg'
+                              : 'text-white/70 hover:text-white hover:bg-white/10'
+                          }`}
+                        >
+                          Commercial
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Basic Details */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Property Title</label>
+                    <input
+                      type="text"
+                      required
+                      value={editFormData.title}
+                      onChange={(e) => setEditFormData(prev => ({ ...prev, title: e.target.value }))}
+                      className="w-full px-4 py-3 bg-gray-900/80 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
+                      placeholder="e.g., Premium Residential Plot"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Price</label>
+                    <input
+                      type="text"
+                      required
+                      value={editFormData.price}
+                      onChange={(e) => setEditFormData(prev => ({ ...prev, price: e.target.value }))}
+                      className="w-full px-4 py-3 bg-gray-900/80 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
+                      placeholder="e.g., ₹2.5 Cr"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Area</label>
+                    <input
+                      type="text"
+                      required
+                      value={editFormData.area}
+                      onChange={(e) => setEditFormData(prev => ({ ...prev, area: e.target.value }))}
+                      className="w-full px-4 py-3 bg-gray-900/80 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
+                      placeholder="e.g., 3 cent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Location</label>
+                    <input
+                      type="text"
+                      required
+                      value={editFormData.location}
+                      onChange={(e) => setEditFormData(prev => ({ ...prev, location: e.target.value }))}
+                      className="w-full px-4 py-3 bg-gray-900/80 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
+                      placeholder="e.g., Jubilee Hills, Hyderabad"
+                    />
+                  </div>
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">Description</label>
+                  <textarea
+                    required
+                    rows={4}
+                    value={editFormData.description}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, description: e.target.value }))}
+                    className="w-full px-4 py-3 bg-gray-900/80 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white resize-none"
+                    placeholder="Describe the property in detail..."
+                  />
+                </div>
+
+                {/* Contact Details */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Contact Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={editFormData.contact_name}
+                      onChange={(e) => setEditFormData(prev => ({ ...prev, contact_name: e.target.value }))}
+                      className="w-full px-4 py-3 bg-gray-900/80 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
+                      placeholder="Contact person name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Phone</label>
+                    <input
+                      type="tel"
+                      required
+                      value={editFormData.contact_phone}
+                      onChange={(e) => setEditFormData(prev => ({ ...prev, contact_phone: e.target.value }))}
+                      className="w-full px-4 py-3 bg-gray-900/80 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
+                      placeholder="+91 1234567890"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Email</label>
+                    <input
+                      type="email"
+                      required
+                      value={editFormData.contact_email}
+                      onChange={(e) => setEditFormData(prev => ({ ...prev, contact_email: e.target.value }))}
+                      className="w-full px-4 py-3 bg-gray-900/80 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
+                      placeholder="contact@email.com"
+                    />
+                  </div>
+                </div>
+
+                {/* Current Images Display */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">Current Images</label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
+                    {editingProperty.images && editingProperty.images.map((image, index) => (
+                      <div key={index} className="relative">
+                        <img
+                          src={image}
+                          alt={`Current ${index + 1}`}
+                          className="w-full h-24 object-cover rounded-lg border border-gray-600"
+                        />
+                        <div className="absolute top-1 left-1 bg-black/60 text-white text-xs px-2 py-1 rounded">
+                          Current
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* New Image Upload */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">Replace Images (Optional - Max 5)</label>
+                  <div className="border-2 border-dashed border-red-600/30 rounded-lg p-6 text-center hover:border-red-400 transition-colors">
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={handleEditImageChange}
+                      className="hidden"
+                      id="edit-image-upload"
+                    />
+                    <label htmlFor="edit-image-upload" className="cursor-pointer">
+                      <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-300">Click to upload new images (will replace current ones)</p>
+                      <p className="text-sm text-gray-500 mt-2">PNG, JPG, GIF up to 10MB each</p>
+                    </label>
+                  </div>
+
+                  {/* New Image Previews */}
+                  {editImagePreviews.length > 0 && (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mt-4">
+                      {editImagePreviews.map((preview, index) => (
+                        <div key={index} className="relative">
+                          <img
+                            src={preview}
+                            alt={`New ${index + 1}`}
+                            className="w-full h-24 object-cover rounded-lg"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeEditImage(index)}
+                            className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full p-1 hover:bg-red-700"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                          <div className="absolute top-1 left-1 bg-green-600 text-white text-xs px-2 py-1 rounded">
+                            New
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Submit Buttons */}
+                <div className="flex space-x-4">
+                  <button
+                    type="button"
+                    onClick={() => setEditingProperty(null)}
+                    className="flex-1 py-4 px-6 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-semibold transition-all duration-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={editLoading}
+                    className="flex-1 py-4 px-6 bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-600 text-white rounded-lg font-semibold transition-all duration-300"
+                  >
+                    {editLoading ? 'Updating...' : 'Update Property'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Admin Upload Form Modal */}
       {showUploadForm && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
