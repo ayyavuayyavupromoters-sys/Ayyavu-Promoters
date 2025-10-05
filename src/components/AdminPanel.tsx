@@ -9,6 +9,7 @@ const AdminPanel = () => {
   const [properties, setProperties] = useState<PropertyListing[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedProperty, setSelectedProperty] = useState<PropertyListing | null>(null);
+  const [editingProperty, setEditingProperty] = useState<PropertyListing | null>(null);
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [uploadFormData, setUploadFormData] = useState({
@@ -25,6 +26,22 @@ const AdminPanel = () => {
   const [uploadImages, setUploadImages] = useState<File[]>([]);
   const [uploadImagePreviews, setUploadImagePreviews] = useState<string[]>([]);
   const [uploadLoading, setUploadLoading] = useState(false);
+  
+  // Edit form state
+  const [editFormData, setEditFormData] = useState({
+    title: '',
+    description: '',
+    price: '',
+    area: '',
+    location: '',
+    property_type: 'residential' as 'residential' | 'commercial',
+    contact_name: '',
+    contact_phone: '',
+    contact_email: ''
+  });
+  const [editImages, setEditImages] = useState<File[]>([]);
+  const [editImagePreviews, setEditImagePreviews] = useState<string[]>([]);
+  const [editLoading, setEditLoading] = useState(false);
 
   // Admin password - Change this to your desired password
   const ADMIN_PASSWORD = 'ayyavu2004admin';
@@ -586,6 +603,15 @@ const AdminPanel = () => {
                           <img
                             src={preview}
                             alt={`Preview ${index + 1}`}
+                     {/* Edit Button - Available for all properties */}
+                     <button
+                       onClick={() => setEditingProperty(property)}
+                       className="w-full py-2 px-4 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-medium transition-all duration-300 flex items-center justify-center space-x-2"
+                     >
+                       <Edit className="h-4 w-4" />
+                       <span>Edit Property</span>
+                     </button>
+                     
                             className="w-full h-24 object-cover rounded-lg"
                           />
                           <button
