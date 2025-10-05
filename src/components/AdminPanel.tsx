@@ -840,15 +840,6 @@ const AdminPanel = () => {
                           <img
                             src={preview}
                             alt={`Preview ${index + 1}`}
-                     {/* Edit Button - Available for all properties */}
-                     <button
-                       onClick={() => setEditingProperty(property)}
-                       className="w-full py-2 px-4 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-medium transition-all duration-300 flex items-center justify-center space-x-2"
-                     >
-                       <Edit className="h-4 w-4" />
-                       <span>Edit Property</span>
-                     </button>
-                     
                             className="w-full h-24 object-cover rounded-lg"
                           />
                           <button
