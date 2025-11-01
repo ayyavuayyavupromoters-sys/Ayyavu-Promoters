@@ -138,7 +138,7 @@ const AdminPanel = () => {
     }
 
     setUploadImages(prev => [...prev, ...files]);
-    
+
     // Create previews
     files.forEach(file => {
       const reader = new FileReader();
@@ -147,6 +147,82 @@ const AdminPanel = () => {
       };
       reader.readAsDataURL(file);
     });
+  };
+
+  const handleEditImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length + editImages.length > 5) {
+      alert('Maximum 5 images allowed');
+      return;
+    }
+
+    setEditImages(prev => [...prev, ...files]);
+
+    // Create previews
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setEditImagePreviews(prev => [...prev, e.target?.result as string]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeEditImage = (index: number) => {
+    setEditImages(prev => prev.filter((_, i) => i !== index));
+    setEditImagePreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProperty) return;
+
+    setEditLoading(true);
+    try {
+      let imageUrls = [...(editingProperty.images || [])];
+
+      // Upload new images if any
+      if (editImages.length > 0) {
+        imageUrls = [];
+        for (const image of editImages) {
+          const fileName = `edit-${Date.now()}-${image.name}`;
+          const { data, error } = await supabase.storage
+            .from('property-images')
+            .upload(fileName, image);
+
+          if (error) throw error;
+
+          const { data: { publicUrl } } = supabase.storage
+            .from('property-images')
+            .getPublicUrl(fileName);
+
+          imageUrls.push(publicUrl);
+        }
+      }
+
+      // Update property
+      const { error } = await supabase
+        .from('property_listings')
+        .update({
+          ...editFormData,
+          images: imageUrls,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', editingProperty.id);
+
+      if (error) throw error;
+
+      alert('Property updated successfully!');
+      setEditingProperty(null);
+      setEditImages([]);
+      setEditImagePreviews([]);
+      fetchProperties();
+    } catch (error: any) {
+      console.error('Error updating property:', error);
+      alert('Error updating property: ' + error.message);
+    } finally {
+      setEditLoading(false);
+    }
   };
 
   const removeUploadImage = (index: number) => {
@@ -390,7 +466,30 @@ const AdminPanel = () => {
                       <Eye className="h-4 w-4" />
                       <span>View Details</span>
                     </button>
-                    
+
+                    <button
+                      onClick={() => {
+                        setEditingProperty(property);
+                        setEditFormData({
+                          title: property.title,
+                          description: property.description,
+                          price: property.price,
+                          area: property.area,
+                          location: property.location,
+                          property_type: property.property_type,
+                          contact_name: property.contact_name,
+                          contact_phone: property.contact_phone,
+                          contact_email: property.contact_email
+                        });
+                        setEditImages([]);
+                        setEditImagePreviews([]);
+                      }}
+                      className="w-full py-2 px-4 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-medium transition-all duration-300 flex items-center justify-center space-x-2"
+                    >
+                      <Edit className="h-4 w-4" />
+                      <span>Edit</span>
+                    </button>
+
                     {property.status === 'pending' && (
                       <div className="grid grid-cols-2 gap-2">
                         <button
@@ -409,7 +508,7 @@ const AdminPanel = () => {
                         </button>
                       </div>
                     )}
-                    
+
                     {/* Delete Button - Available for all properties */}
                     <button
                       onClick={() => deleteProperty(property.id, property.title)}
@@ -833,30 +932,6 @@ const AdminPanel = () => {
                   </div>
 
                   {/* Image Previews */}
-                     {/* Edit Button - Available for all properties */}
-                     <button
-                       onClick={() => {
-                         setEditingProperty(property);
-                         setEditFormData({
-                           title: property.title,
-                           description: property.description,
-                           price: property.price,
-                           area: property.area,
-                           location: property.location,
-                           property_type: property.property_type,
-                           contact_name: property.contact_name,
-                           contact_phone: property.contact_phone,
-                           contact_email: property.contact_email
-                         });
-                         setEditImages([]);
-                         setEditImagePreviews([]);
-                       }}
-                       className="w-full py-2 px-4 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-medium transition-all duration-300 flex items-center justify-center space-x-2"
-                     >
-                       <Edit className="h-4 w-4" />
-                       <span>Edit Property</span>
-                     </button>
-                     
                   {uploadImagePreviews.length > 0 && (
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mt-4">
                       {uploadImagePreviews.map((preview, index) => (
