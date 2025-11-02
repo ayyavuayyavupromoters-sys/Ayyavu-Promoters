@@ -60,28 +60,28 @@ const AdminPanel = () => {
     setLoading(true);
     try {
       console.log('Fetching properties with filter:', filter);
-      
+
       let query = supabase
         .from('property_listings')
-        .select('*')
+        .select('*', { count: 'exact' })
         .order('created_at', { ascending: false });
-      
-      if (filter !== 'all') {
+
+      if (filter && filter !== 'all') {
         query = query.eq('status', filter);
       }
 
-      const { data, error } = await query;
-      
+      const { data, error, count } = await query;
+
       if (error) {
         console.error('Supabase error:', error);
         throw error;
       }
-      
-      console.log('Fetched properties:', data);
+
+      console.log('Fetched properties:', data, 'Count:', count);
       setProperties(data || []);
     } catch (error: any) {
       console.error('Error fetching properties:', error);
-      alert('Error fetching properties: ' + error.message);
+      alert('Error fetching properties: ' + (error.message || String(error)));
     } finally {
       setLoading(false);
     }
