@@ -1,18 +1,36 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, CreditCard as Edit, Trash2, Save, X, Eye, MapPin, Home, Ruler, Phone, Mail, User, IndianRupee, Building, Calendar } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Save, X, Eye, MapPin, Home, Ruler, Phone, Mail, User, IndianRupee, Building, Calendar } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { PropertyListing } from '../lib/supabase';
 
 const AdminPanel = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [password, setPassword] = useState('');
   const [properties, setProperties] = useState<PropertyListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingProperty, setEditingProperty] = useState<PropertyListing | null>(null);
   const [viewingProperty, setViewingProperty] = useState<PropertyListing | null>(null);
   const [editFormData, setEditFormData] = useState<Partial<PropertyListing>>({});
 
+  // Simple password protection - you can change this password
+  const ADMIN_PASSWORD = 'admin123';
+
   useEffect(() => {
-    fetchProperties();
-  }, []);
+    if (isAuthenticated) {
+      fetchProperties();
+    }
+  }, [isAuthenticated]);
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password === ADMIN_PASSWORD) {
+      setIsAuthenticated(true);
+      setPassword('');
+    } else {
+      alert('Incorrect password');
+      setPassword('');
+    }
+  };
 
   const fetchProperties = async () => {
     try {
@@ -132,6 +150,46 @@ const AdminPanel = () => {
     });
   };
 
+  // Login Screen
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-950 via-red-950/20 to-gray-950 text-white flex items-center justify-center">
+        <div className="bg-gradient-to-br from-gray-900/80 to-red-950/30 rounded-2xl p-8 border border-red-600/30 backdrop-blur-sm max-w-md w-full mx-4">
+          <h1 className="text-3xl font-bold text-center mb-8 bg-gradient-to-r from-yellow-600 via-amber-500 to-yellow-700 bg-clip-text text-transparent">
+            Admin Login
+          </h1>
+          <form onSubmit={handleLogin} className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium mb-2">Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-3 bg-gray-900/80 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
+                placeholder="Enter admin password"
+                required
+              />
+            </div>
+            <button
+              type="submit"
+              className="w-full bg-red-600 hover:bg-transparent hover:border-2 hover:border-red-400 hover:text-red-400 text-white py-3 rounded-lg font-semibold transition-all duration-300 hover:scale-105"
+            >
+              Login
+            </button>
+          </form>
+          <div className="mt-6 text-center">
+            <button 
+              onClick={handleBackClick}
+              className="text-gray-400 hover:text-white transition-colors text-sm"
+            >
+              ← Back to Home
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-950 via-red-950/20 to-gray-950 text-white flex items-center justify-center">
@@ -156,8 +214,16 @@ const AdminPanel = () => {
             <h1 className="text-2xl font-bold bg-gradient-to-r from-yellow-600 via-amber-500 to-yellow-700 bg-clip-text text-transparent">
               Admin Panel
             </h1>
-            <div className="text-sm text-gray-300">
-              {properties.length} Properties
+            <div className="flex items-center space-x-4">
+              <div className="text-sm text-gray-300">
+                {properties.length} Properties
+              </div>
+              <button
+                onClick={() => setIsAuthenticated(false)}
+                className="text-sm text-red-400 hover:text-red-300 transition-colors"
+              >
+                Logout
+              </button>
             </div>
           </div>
         </div>
