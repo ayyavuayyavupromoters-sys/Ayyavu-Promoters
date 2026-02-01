@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Edit, Trash2, Save, X, Eye, MapPin, Home, Ruler, Phone, Mail, User, IndianRupee, Building, Calendar } from 'lucide-react';
+import { ArrowLeft, CreditCard as Edit, Trash2, Save, X, Eye, MapPin, Home, Ruler, Phone, Mail, User, IndianRupee, Building, Calendar } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { PropertyListing } from '../lib/supabase';
 
