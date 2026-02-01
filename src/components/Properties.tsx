@@ -1,9 +1,10 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ArrowLeft, MapPin, Home, Ruler, Calendar, Building } from 'lucide-react';
+import { ArrowLeft, MapPin, Home, Ruler, Calendar, Building, Eye } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { PropertyListing } from '../lib/supabase';
+import PropertyDetails from './PropertyDetails';
 
 
 const Properties = () => {
@@ -11,6 +12,7 @@ const Properties = () => {
   const [propertyType, setPropertyType] = useState<'residential' | 'commercial'>('residential');
   const [properties, setProperties] = useState<PropertyListing[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewingProperty, setViewingProperty] = useState<PropertyListing | null>(null);
 
   useEffect(() => {
     // Check URL parameter for property type
@@ -152,13 +154,22 @@ const Properties = () => {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2 mb-4">
+                  <button 
+                    onClick={() => setViewingProperty(property)}
+                    className="py-2 px-4 rounded-lg font-medium transition-all duration-300 hover:scale-105 bg-gray-600 hover:bg-transparent hover:border-2 hover:border-gray-400 hover:text-gray-400 text-white text-sm flex items-center justify-center"
+                  >
+                    <Eye className="h-4 w-4 mr-1" />
+                    Details
+                  </button>
                   <button 
                     onClick={() => handleContactSeller(property)}
-                    className="w-full py-3 rounded-lg font-semibold transition-all duration-300 hover:scale-105 bg-green-600 hover:bg-transparent hover:border-2 hover:border-green-400 hover:text-green-400 text-white flex items-center justify-center space-x-2"
+                    className="py-2 px-4 rounded-lg font-medium transition-all duration-300 hover:scale-105 bg-green-600 hover:bg-transparent hover:border-2 hover:border-green-400 hover:text-green-400 text-white text-sm flex items-center justify-center"
                   >
-                    <span>WhatsApp</span>
+                    WhatsApp
                   </button>
+                </div>
+                <div className="space-y-2">
                   <div className="grid grid-cols-2 gap-2">
                     <button 
                       onClick={() => handleCallSeller(property.contact_phone)}
@@ -180,6 +191,14 @@ const Properties = () => {
         </div>
         )}
       </div>
+
+      {/* Property Details Modal */}
+      {viewingProperty && (
+        <PropertyDetails 
+          property={viewingProperty} 
+          onClose={() => setViewingProperty(null)} 
+        />
+      )}
 
       {/* Contact Section */}
       <div className="bg-gradient-to-r from-red-950/30 to-gray-900/30 border-t border-red-600/30 py-12">

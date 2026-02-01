@@ -1,115 +1,95 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Eye, Check, X, Calendar, MapPin, Phone, Mail, User, Plus, Upload, Trash2, CreditCard as Edit } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Save, X, Eye, MapPin, Home, Ruler, Phone, Mail, User, IndianRupee, Building, Calendar } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { PropertyListing } from '../lib/supabase';
 
 const AdminPanel = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [password, setPassword] = useState('');
   const [properties, setProperties] = useState<PropertyListing[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [selectedProperty, setSelectedProperty] = useState<PropertyListing | null>(null);
+  const [loading, setLoading] = useState(true);
   const [editingProperty, setEditingProperty] = useState<PropertyListing | null>(null);
-  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
-  const [showUploadForm, setShowUploadForm] = useState(false);
-  const [uploadFormData, setUploadFormData] = useState({
-    title: '',
-    description: '',
-    price: '',
-    area: '',
-    location: '',
-    property_type: 'residential' as 'residential' | 'commercial',
-    contact_name: '',
-    contact_phone: '',
-    contact_email: ''
-  });
-  const [uploadImages, setUploadImages] = useState<File[]>([]);
-  const [uploadImagePreviews, setUploadImagePreviews] = useState<string[]>([]);
-  const [uploadLoading, setUploadLoading] = useState(false);
-  
-  // Edit form state
-  const [editFormData, setEditFormData] = useState({
-    title: '',
-    description: '',
-    price: '',
-    area: '',
-    location: '',
-    property_type: 'residential' as 'residential' | 'commercial',
-    contact_name: '',
-    contact_phone: '',
-    contact_email: ''
-  });
-  const [editImages, setEditImages] = useState<File[]>([]);
-  const [editImagePreviews, setEditImagePreviews] = useState<string[]>([]);
-  const [editLoading, setEditLoading] = useState(false);
+  const [viewingProperty, setViewingProperty] = useState<PropertyListing | null>(null);
+  const [editFormData, setEditFormData] = useState<Partial<PropertyListing>>({});
 
-  // Admin password - Change this to your desired password
-  const ADMIN_PASSWORD = 'ayyavu2004admin';
-
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (password === ADMIN_PASSWORD) {
-      setIsAuthenticated(true);
-      fetchProperties();
-    } else {
-      alert('Invalid password');
-    }
-  };
+  useEffect(() => {
+    fetchProperties();
+  }, []);
 
   const fetchProperties = async () => {
-    setLoading(true);
     try {
-      console.log('Fetching properties with filter:', filter);
-
-      let query = supabase
+      const { data, error } = await supabase
         .from('property_listings')
-        .select('*', { count: 'exact' })
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (filter && filter !== 'all') {
-        query = query.eq('status', filter);
-      }
-
-      const { data, error, count } = await query;
-
-      if (error) {
-        console.error('Supabase error:', error);
-        throw error;
-      }
-
-      console.log('Fetched properties:', data, 'Count:', count);
+      if (error) throw error;
       setProperties(data || []);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching properties:', error);
-      alert('Error fetching properties: ' + (error.message || String(error)));
     } finally {
       setLoading(false);
     }
   };
 
-  const updatePropertyStatus = async (propertyId: string, newStatus: 'approved' | 'rejected') => {
+  const handleStatusChange = async (propertyId: string, newStatus: 'pending' | 'approved' | 'rejected') => {
     try {
       const { error } = await supabase
         .from('property_listings')
-        .update({ 
-          status: newStatus, 
-          updated_at: new Date().toISOString() 
-        })
+        .update({ status: newStatus, updated_at: new Date().toISOString() })
         .eq('id', propertyId);
 
       if (error) throw error;
       
-      alert(`Property ${newStatus} successfully!`);
-      fetchProperties();
-      setSelectedProperty(null);
-    } catch (error: any) {
-      console.error('Error updating property:', error);
-      alert('Error updating property status: ' + error.message);
+      setProperties(prev => 
+        prev.map(prop => 
+          prop.id === propertyId 
+            ? { ...prop, status: newStatus, updated_at: new Date().toISOString() }
+            : prop
+        )
+      );
+    } catch (error) {
+      console.error('Error updating status:', error);
+      alert('Error updating property status');
     }
   };
 
-  const deleteProperty = async (propertyId: string, propertyTitle: string) => {
-    if (!confirm(`Are you sure you want to delete "${propertyTitle}"? This action cannot be undone.`)) {
+  const handleEdit = (property: PropertyListing) => {
+    setEditingProperty(property);
+    setEditFormData(property);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingProperty || !editFormData) return;
+
+    try {
+      const { error } = await supabase
+        .from('property_listings')
+        .update({
+          ...editFormData,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', editingProperty.id);
+
+      if (error) throw error;
+
+      setProperties(prev =>
+        prev.map(prop =>
+          prop.id === editingProperty.id
+            ? { ...prop, ...editFormData, updated_at: new Date().toISOString() }
+            : prop
+        )
+      );
+
+      setEditingProperty(null);
+      setEditFormData({});
+      alert('Property updated successfully!');
+    } catch (error) {
+      console.error('Error updating property:', error);
+      alert('Error updating property');
+    }
+  };
+
+  const handleDelete = async (propertyId: string) => {
+    if (!confirm('Are you sure you want to delete this property? This action cannot be undone.')) {
       return;
     }
 
@@ -120,176 +100,17 @@ const AdminPanel = () => {
         .eq('id', propertyId);
 
       if (error) throw error;
-      
+
+      setProperties(prev => prev.filter(prop => prop.id !== propertyId));
       alert('Property deleted successfully!');
-      fetchProperties();
-      setSelectedProperty(null);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error deleting property:', error);
-      alert('Error deleting property: ' + error.message);
+      alert('Error deleting property');
     }
   };
 
-  const handleUploadImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length + uploadImages.length > 5) {
-      alert('Maximum 5 images allowed');
-      return;
-    }
-
-    setUploadImages(prev => [...prev, ...files]);
-
-    // Create previews
-    files.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setUploadImagePreviews(prev => [...prev, e.target?.result as string]);
-      };
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const handleEditImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length + editImages.length > 5) {
-      alert('Maximum 5 images allowed');
-      return;
-    }
-
-    setEditImages(prev => [...prev, ...files]);
-
-    // Create previews
-    files.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setEditImagePreviews(prev => [...prev, e.target?.result as string]);
-      };
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const removeEditImage = (index: number) => {
-    setEditImages(prev => prev.filter((_, i) => i !== index));
-    setEditImagePreviews(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const handleEditSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingProperty) return;
-
-    setEditLoading(true);
-    try {
-      let imageUrls = [...(editingProperty.images || [])];
-
-      // Upload new images if any
-      if (editImages.length > 0) {
-        imageUrls = [];
-        for (const image of editImages) {
-          const fileName = `edit-${Date.now()}-${image.name}`;
-          const { data, error } = await supabase.storage
-            .from('property-images')
-            .upload(fileName, image);
-
-          if (error) throw error;
-
-          const { data: { publicUrl } } = supabase.storage
-            .from('property-images')
-            .getPublicUrl(fileName);
-
-          imageUrls.push(publicUrl);
-        }
-      }
-
-      // Update property
-      const { error } = await supabase
-        .from('property_listings')
-        .update({
-          ...editFormData,
-          images: imageUrls,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', editingProperty.id);
-
-      if (error) throw error;
-
-      alert('Property updated successfully!');
-      setEditingProperty(null);
-      setEditImages([]);
-      setEditImagePreviews([]);
-      fetchProperties();
-    } catch (error: any) {
-      console.error('Error updating property:', error);
-      alert('Error updating property: ' + error.message);
-    } finally {
-      setEditLoading(false);
-    }
-  };
-
-  const removeUploadImage = (index: number) => {
-    setUploadImages(prev => prev.filter((_, i) => i !== index));
-    setUploadImagePreviews(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const handleAdminUpload = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setUploadLoading(true);
-
-    try {
-      // Upload images to Supabase storage
-      const imageUrls: string[] = [];
-      for (const image of uploadImages) {
-        const fileName = `admin-${Date.now()}-${image.name}`;
-        const { data, error } = await supabase.storage
-          .from('property-images')
-          .upload(fileName, image);
-        
-        if (error) throw error;
-        
-        const { data: { publicUrl } } = supabase.storage
-          .from('property-images')
-          .getPublicUrl(fileName);
-        
-        imageUrls.push(publicUrl);
-      }
-
-      // Insert property listing with approved status
-      const { error } = await supabase
-        .from('property_listings')
-        .insert({
-          ...uploadFormData,
-          images: imageUrls,
-          user_id: null,
-          status: 'approved' // Admin uploads are automatically approved
-        });
-
-      if (error) throw error;
-
-      alert('Property uploaded and approved successfully!');
-      
-      // Reset form
-      setUploadFormData({
-        title: '',
-        description: '',
-        price: '',
-        area: '',
-        location: '',
-        property_type: 'residential',
-        contact_name: '',
-        contact_phone: '',
-        contact_email: ''
-      });
-      setUploadImages([]);
-      setUploadImagePreviews([]);
-      setShowUploadForm(false);
-      
-      // Refresh properties list
-      fetchProperties();
-    } catch (error: any) {
-      console.error('Error uploading property:', error);
-      alert('Error uploading property: ' + error.message);
-    } finally {
-      setUploadLoading(false);
-    }
+  const handleBackClick = () => {
+    window.history.back();
   };
 
   const getStatusColor = (status: string) => {
@@ -302,7 +123,7 @@ const AdminPanel = () => {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return new Date(dateString).toLocaleDateString('en-IN', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -311,34 +132,10 @@ const AdminPanel = () => {
     });
   };
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchProperties();
-    }
-  }, [filter, isAuthenticated]);
-
-  if (!isAuthenticated) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-950 via-red-950/20 to-gray-950 flex items-center justify-center">
-        <div className="bg-gradient-to-br from-gray-900/80 to-red-950/30 p-8 rounded-2xl border border-red-600/30 backdrop-blur-sm max-w-md w-full mx-4">
-          <h1 className="text-2xl font-bold text-white text-center mb-6">Admin Login</h1>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter admin password"
-              className="w-full px-4 py-3 bg-gray-900/80 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white placeholder-gray-400"
-              required
-            />
-            <button
-              type="submit"
-              className="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-semibold transition-all duration-300"
-            >
-              Login
-            </button>
-          </form>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-gray-950 via-red-950/20 to-gray-950 text-white flex items-center justify-center">
+        <div className="text-xl">Loading admin panel...</div>
       </div>
     );
   }
@@ -350,75 +147,31 @@ const AdminPanel = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <button 
-              onClick={() => window.history.back()}
-              className="flex items-center space-x-2 text-white/90 hover:text-red-400 transition-all duration-300"
+              onClick={handleBackClick}
+              className="flex items-center space-x-2 text-white/90 hover:text-red-400 transition-all duration-300 hover:scale-105"
             >
               <ArrowLeft className="h-5 w-5" />
-              <span>Back to Website</span>
+              <span>Back to Home</span>
             </button>
             <h1 className="text-2xl font-bold bg-gradient-to-r from-yellow-600 via-amber-500 to-yellow-700 bg-clip-text text-transparent">
               Admin Panel
             </h1>
-            <div className="flex items-center space-x-4 flex-shrink-0">
-              <button
-                onClick={() => setShowUploadForm(true)}
-                className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-300 hover:scale-105 shadow-lg"
-              >
-                <Plus className="h-4 w-4" />
-                <span className="whitespace-nowrap">Add Property</span>
-              </button>
-              <button
-                onClick={() => setIsAuthenticated(false)}
-                className="text-white/90 hover:text-red-400 transition-all duration-300 px-3 py-2 rounded-lg hover:bg-white/10"
-              >
-                Logout
-              </button>
+            <div className="text-sm text-gray-300">
+              {properties.length} Properties
             </div>
           </div>
         </div>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="flex justify-center mb-8">
-          <div className="bg-black/20 backdrop-blur-md rounded-full border border-white/10 p-2">
-            <div className="flex space-x-2">
-              {(['pending', 'approved', 'rejected', 'all'] as const).map((status) => (
-                <button
-                  key={status}
-                  onClick={() => setFilter(status)}
-                  className={`px-6 py-3 rounded-full font-medium transition-all duration-300 ${
-                    filter === status
-                      ? 'bg-red-600 text-white shadow-lg'
-                      : 'text-white/70 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  {status.charAt(0).toUpperCase() + status.slice(1)}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Debug Info */}
-        <div className="mb-4 text-center text-gray-400 text-sm">
-          Showing {properties.length} properties | Filter: {filter}
-        </div>
-
-        {/* Properties Grid */}
-        {loading ? (
+      {/* Properties List */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {properties.length === 0 ? (
           <div className="text-center py-12">
-            <div className="text-white text-xl">Loading properties...</div>
-          </div>
-        ) : properties.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-white text-xl">No {filter} properties found.</div>
-            <p className="text-gray-400 mt-2">
-              {filter === 'pending' ? 'No properties waiting for approval.' : `No ${filter} properties available.`}
-            </p>
+            <div className="text-white text-xl">No properties found</div>
+            <p className="text-gray-400 mt-2">Properties will appear here once submitted</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {properties.map((property) => (
               <div 
                 key={property.id}
@@ -436,86 +189,79 @@ const AdminPanel = () => {
                       {property.status.charAt(0).toUpperCase() + property.status.slice(1)}
                     </span>
                   </div>
+                  <div className="absolute top-4 left-4">
+                    <span className="bg-black/60 text-white px-3 py-1 rounded-full text-xs font-medium flex items-center">
+                      {property.property_type === 'residential' ? <Home className="h-3 w-3 mr-1" /> : <Building className="h-3 w-3 mr-1" />}
+                      {property.property_type === 'residential' ? 'Residential' : 'Commercial'}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Property Details */}
                 <div className="p-6">
-                  <h3 className="text-lg font-semibold text-white mb-2">{property.title}</h3>
+                  <h3 className="text-xl font-semibold text-white mb-2">{property.title}</h3>
                   
                   <div className="flex items-center text-gray-300 mb-2">
                     <MapPin className="h-4 w-4 mr-2 text-red-400" />
                     <span className="text-sm">{property.location}</span>
                   </div>
 
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="text-xl font-bold text-red-400">{property.price}</span>
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="text-2xl font-bold text-red-400">{property.price}</span>
                     <span className="text-gray-300 text-sm">{property.area}</span>
                   </div>
 
-                  <div className="flex items-center text-gray-400 text-xs mb-4">
-                    <Calendar className="h-3 w-3 mr-1" />
-                    <span>{formatDate(property.created_at)}</span>
+                  <p className="text-gray-300 text-sm mb-4 line-clamp-2">{property.description}</p>
+
+                  {/* Contact Info */}
+                  <div className="mb-4 text-sm text-gray-400">
+                    <p>Contact: {property.contact_name}</p>
+                    <p>Phone: {property.contact_phone}</p>
+                    <p>Email: {property.contact_email}</p>
+                  </div>
+
+                  {/* Timestamps */}
+                  <div className="mb-4 text-xs text-gray-500">
+                    <p>Created: {formatDate(property.created_at)}</p>
+                    <p>Updated: {formatDate(property.updated_at)}</p>
+                  </div>
+
+                  {/* Status Controls */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium mb-2">Status</label>
+                    <select
+                      value={property.status}
+                      onChange={(e) => handleStatusChange(property.id, e.target.value as any)}
+                      className="w-full px-3 py-2 bg-gray-800 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white text-sm"
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="approved">Approved</option>
+                      <option value="rejected">Rejected</option>
+                    </select>
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="space-y-2">
-                    <button
-                      onClick={() => setSelectedProperty(property)}
-                      className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all duration-300 flex items-center justify-center space-x-2"
+                  <div className="grid grid-cols-3 gap-2">
+                    <button 
+                      onClick={() => setViewingProperty(property)}
+                      className="py-2 px-3 rounded-lg font-medium transition-all duration-300 hover:scale-105 bg-blue-600 hover:bg-transparent hover:border-2 hover:border-blue-400 hover:text-blue-400 text-white text-sm flex items-center justify-center"
                     >
-                      <Eye className="h-4 w-4" />
-                      <span>View Details</span>
+                      <Eye className="h-4 w-4 mr-1" />
+                      View
                     </button>
-
-                    <button
-                      onClick={() => {
-                        setEditingProperty(property);
-                        setEditFormData({
-                          title: property.title,
-                          description: property.description,
-                          price: property.price,
-                          area: property.area,
-                          location: property.location,
-                          property_type: property.property_type,
-                          contact_name: property.contact_name,
-                          contact_phone: property.contact_phone,
-                          contact_email: property.contact_email
-                        });
-                        setEditImages([]);
-                        setEditImagePreviews([]);
-                      }}
-                      className="w-full py-2 px-4 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-medium transition-all duration-300 flex items-center justify-center space-x-2"
+                    <button 
+                      onClick={() => handleEdit(property)}
+                      className="py-2 px-3 rounded-lg font-medium transition-all duration-300 hover:scale-105 bg-yellow-600 hover:bg-transparent hover:border-2 hover:border-yellow-400 hover:text-yellow-400 text-white text-sm flex items-center justify-center"
                     >
-                      <Edit className="h-4 w-4" />
-                      <span>Edit</span>
+                      <Edit className="h-4 w-4 mr-1" />
+                      Edit
                     </button>
-
-                    {property.status === 'pending' && (
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          onClick={() => updatePropertyStatus(property.id, 'approved')}
-                          className="py-2 px-4 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-all duration-300 flex items-center justify-center space-x-1"
-                        >
-                          <Check className="h-4 w-4" />
-                          <span>Approve</span>
-                        </button>
-                        <button
-                          onClick={() => updatePropertyStatus(property.id, 'rejected')}
-                          className="py-2 px-4 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-all duration-300 flex items-center justify-center space-x-1"
-                        >
-                          <X className="h-4 w-4" />
-                          <span>Reject</span>
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Delete Button - Available for all properties */}
-                    <button
-                      onClick={() => deleteProperty(property.id, property.title)}
-                      className="w-full py-2 px-4 bg-red-800 hover:bg-red-900 text-white rounded-lg font-medium transition-all duration-300 flex items-center justify-center space-x-2 border border-red-600"
+                    <button 
+                      onClick={() => handleDelete(property.id)}
+                      className="py-2 px-3 rounded-lg font-medium transition-all duration-300 hover:scale-105 bg-red-600 hover:bg-transparent hover:border-2 hover:border-red-400 hover:text-red-400 text-white text-sm flex items-center justify-center"
                     >
-                      <Trash2 className="h-4 w-4" />
-                      <span>Delete Property</span>
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Delete
                     </button>
                   </div>
                 </div>
@@ -525,594 +271,260 @@ const AdminPanel = () => {
         )}
       </div>
 
-      {/* Edit Property Modal */}
+      {/* Edit Modal */}
       {editingProperty && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-gradient-to-br from-gray-900 to-red-950/50 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-red-600/30">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-white">Edit Property</h2>
-                <button
-                  onClick={() => setEditingProperty(null)}
-                  className="text-gray-400 hover:text-white transition-colors"
-                >
-                  <X className="h-6 w-6" />
-                </button>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-gray-900 to-red-950/50 rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-red-600/30">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-white">Edit Property</h2>
+              <button
+                onClick={() => setEditingProperty(null)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2 text-white">Title</label>
+                <input
+                  type="text"
+                  value={editFormData.title || ''}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, title: e.target.value }))}
+                  className="w-full px-4 py-3 bg-gray-800 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
+                />
               </div>
 
-              <form onSubmit={handleEditSubmit} className="space-y-6">
-                {/* Property Type */}
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Property Type</label>
-                  <div className="flex justify-center">
-                    <div className="bg-black/5 backdrop-blur-md rounded-full border border-white/5 p-2">
-                      <div className="flex space-x-2">
-                        <button
-                          type="button"
-                          onClick={() => setEditFormData(prev => ({ ...prev, property_type: 'residential' }))}
-                          className={`px-6 py-3 rounded-full font-medium transition-all duration-300 ${
-                            editFormData.property_type === 'residential'
-                              ? 'bg-red-600 text-white shadow-lg'
-                              : 'text-white/70 hover:text-white hover:bg-white/10'
-                          }`}
-                        >
-                          Residential
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setEditFormData(prev => ({ ...prev, property_type: 'commercial' }))}
-                          className={`px-6 py-3 rounded-full font-medium transition-all duration-300 ${
-                            editFormData.property_type === 'commercial'
-                              ? 'bg-red-600 text-white shadow-lg'
-                              : 'text-white/70 hover:text-white hover:bg-white/10'
-                          }`}
-                        >
-                          Commercial
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Basic Details */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Property Title</label>
-                    <input
-                      type="text"
-                      required
-                      value={editFormData.title}
-                      onChange={(e) => setEditFormData(prev => ({ ...prev, title: e.target.value }))}
-                      className="w-full px-4 py-3 bg-gray-900/80 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
-                      placeholder="e.g., Premium Residential Plot"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Price</label>
-                    <input
-                      type="text"
-                      required
-                      value={editFormData.price}
-                      onChange={(e) => setEditFormData(prev => ({ ...prev, price: e.target.value }))}
-                      className="w-full px-4 py-3 bg-gray-900/80 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
-                      placeholder="e.g., ₹2.5 Cr"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Area</label>
-                    <input
-                      type="text"
-                      required
-                      value={editFormData.area}
-                      onChange={(e) => setEditFormData(prev => ({ ...prev, area: e.target.value }))}
-                      className="w-full px-4 py-3 bg-gray-900/80 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
-                      placeholder="e.g., 3 cent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Location</label>
-                    <input
-                      type="text"
-                      required
-                      value={editFormData.location}
-                      onChange={(e) => setEditFormData(prev => ({ ...prev, location: e.target.value }))}
-                      className="w-full px-4 py-3 bg-gray-900/80 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
-                      placeholder="e.g., Jubilee Hills, Hyderabad"
-                    />
-                  </div>
-                </div>
-
-                {/* Description */}
-                <div>
-                  <label className="block text-sm font-medium mb-2">Description</label>
-                  <textarea
-                    required
-                    rows={4}
-                    value={editFormData.description}
-                    onChange={(e) => setEditFormData(prev => ({ ...prev, description: e.target.value }))}
-                    className="w-full px-4 py-3 bg-gray-900/80 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white resize-none"
-                    placeholder="Describe the property in detail..."
+                  <label className="block text-sm font-medium mb-2 text-white">Price</label>
+                  <input
+                    type="text"
+                    value={editFormData.price || ''}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, price: e.target.value }))}
+                    className="w-full px-4 py-3 bg-gray-800 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
                   />
                 </div>
-
-                {/* Contact Details */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Contact Name</label>
-                    <input
-                      type="text"
-                      required
-                      value={editFormData.contact_name}
-                      onChange={(e) => setEditFormData(prev => ({ ...prev, contact_name: e.target.value }))}
-                      className="w-full px-4 py-3 bg-gray-900/80 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
-                      placeholder="Contact person name"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Phone</label>
-                    <input
-                      type="tel"
-                      required
-                      value={editFormData.contact_phone}
-                      onChange={(e) => setEditFormData(prev => ({ ...prev, contact_phone: e.target.value }))}
-                      className="w-full px-4 py-3 bg-gray-900/80 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
-                      placeholder="+91 1234567890"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Email</label>
-                    <input
-                      type="email"
-                      required
-                      value={editFormData.contact_email}
-                      onChange={(e) => setEditFormData(prev => ({ ...prev, contact_email: e.target.value }))}
-                      className="w-full px-4 py-3 bg-gray-900/80 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
-                      placeholder="contact@email.com"
-                    />
-                  </div>
-                </div>
-
-                {/* Current Images Display */}
                 <div>
-                  <label className="block text-sm font-medium mb-2">Current Images</label>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
-                    {editingProperty.images && editingProperty.images.map((image, index) => (
-                      <div key={index} className="relative">
-                        <img
-                          src={image}
-                          alt={`Current ${index + 1}`}
-                          className="w-full h-24 object-cover rounded-lg border border-gray-600"
-                        />
-                        <div className="absolute top-1 left-1 bg-black/60 text-white text-xs px-2 py-1 rounded">
-                          Current
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  <label className="block text-sm font-medium mb-2 text-white">Area</label>
+                  <input
+                    type="text"
+                    value={editFormData.area || ''}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, area: e.target.value }))}
+                    className="w-full px-4 py-3 bg-gray-800 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
+                  />
                 </div>
+              </div>
 
-                {/* New Image Upload */}
+              <div>
+                <label className="block text-sm font-medium mb-2 text-white">Location</label>
+                <input
+                  type="text"
+                  value={editFormData.location || ''}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, location: e.target.value }))}
+                  className="w-full px-4 py-3 bg-gray-800 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2 text-white">Property Type</label>
+                <select
+                  value={editFormData.property_type || 'residential'}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, property_type: e.target.value as 'residential' | 'commercial' }))}
+                  className="w-full px-4 py-3 bg-gray-800 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
+                >
+                  <option value="residential">Residential</option>
+                  <option value="commercial">Commercial</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2 text-white">Description</label>
+                <textarea
+                  rows={4}
+                  value={editFormData.description || ''}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full px-4 py-3 bg-gray-800 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white resize-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Replace Images (Optional - Max 5)</label>
-                  <div className="border-2 border-dashed border-red-600/30 rounded-lg p-6 text-center hover:border-red-400 transition-colors">
-                    <input
-                      type="file"
-                      multiple
-                      accept="image/*"
-                      onChange={handleEditImageChange}
-                      className="hidden"
-                      id="edit-image-upload"
-                    />
-                    <label htmlFor="edit-image-upload" className="cursor-pointer">
-                      <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-300">Click to upload new images (will replace current ones)</p>
-                      <p className="text-sm text-gray-500 mt-2">PNG, JPG, GIF up to 10MB each</p>
-                    </label>
-                  </div>
-
-                  {/* New Image Previews */}
-                  {editImagePreviews.length > 0 && (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mt-4">
-                      {editImagePreviews.map((preview, index) => (
-                        <div key={index} className="relative">
-                          <img
-                            src={preview}
-                            alt={`New ${index + 1}`}
-                            className="w-full h-24 object-cover rounded-lg"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeEditImage(index)}
-                            className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full p-1 hover:bg-red-700"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                          <div className="absolute top-1 left-1 bg-green-600 text-white text-xs px-2 py-1 rounded">
-                            New
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  <label className="block text-sm font-medium mb-2 text-white">Contact Name</label>
+                  <input
+                    type="text"
+                    value={editFormData.contact_name || ''}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, contact_name: e.target.value }))}
+                    className="w-full px-4 py-3 bg-gray-800 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
+                  />
                 </div>
-
-                {/* Submit Buttons */}
-                <div className="flex space-x-4">
-                  <button
-                    type="button"
-                    onClick={() => setEditingProperty(null)}
-                    className="flex-1 py-4 px-6 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-semibold transition-all duration-300"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={editLoading}
-                    className="flex-1 py-4 px-6 bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-600 text-white rounded-lg font-semibold transition-all duration-300"
-                  >
-                    {editLoading ? 'Updating...' : 'Update Property'}
-                  </button>
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-white">Phone</label>
+                  <input
+                    type="tel"
+                    value={editFormData.contact_phone || ''}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, contact_phone: e.target.value }))}
+                    className="w-full px-4 py-3 bg-gray-800 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
+                  />
                 </div>
-              </form>
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-white">Email</label>
+                  <input
+                    type="email"
+                    value={editFormData.contact_email || ''}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, contact_email: e.target.value }))}
+                    className="w-full px-4 py-3 bg-gray-800 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-4 mt-6">
+              <button
+                onClick={() => setEditingProperty(null)}
+                className="px-6 py-3 border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                Save Changes
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Admin Upload Form Modal */}
-      {showUploadForm && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-gradient-to-br from-gray-900 to-red-950/50 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-red-600/30">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-white">Add New Property (Admin)</h2>
-                <button
-                  onClick={() => setShowUploadForm(false)}
-                  className="text-gray-400 hover:text-white transition-colors"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-
-              <form onSubmit={handleAdminUpload} className="space-y-6">
-                {/* Property Type */}
-                <div>
-                  <label className="block text-sm font-medium mb-2">Property Type</label>
-                  <div className="flex justify-center">
-                    <div className="bg-black/5 backdrop-blur-md rounded-full border border-white/5 p-2">
-                      <div className="flex space-x-2">
-                        <button
-                          type="button"
-                          onClick={() => setUploadFormData(prev => ({ ...prev, property_type: 'residential' }))}
-                          className={`px-6 py-3 rounded-full font-medium transition-all duration-300 ${
-                            uploadFormData.property_type === 'residential'
-                              ? 'bg-red-600 text-white shadow-lg'
-                              : 'text-white/70 hover:text-white hover:bg-white/10'
-                          }`}
-                        >
-                          Residential
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setUploadFormData(prev => ({ ...prev, property_type: 'commercial' }))}
-                          className={`px-6 py-3 rounded-full font-medium transition-all duration-300 ${
-                            uploadFormData.property_type === 'commercial'
-                              ? 'bg-red-600 text-white shadow-lg'
-                              : 'text-white/70 hover:text-white hover:bg-white/10'
-                          }`}
-                        >
-                          Commercial
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Basic Details */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Property Title</label>
-                    <input
-                      type="text"
-                      required
-                      value={uploadFormData.title}
-                      onChange={(e) => setUploadFormData(prev => ({ ...prev, title: e.target.value }))}
-                      className="w-full px-4 py-3 bg-gray-900/80 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
-                      placeholder="e.g., Premium Residential Plot"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Price</label>
-                    <input
-                      type="text"
-                      required
-                      value={uploadFormData.price}
-                      onChange={(e) => setUploadFormData(prev => ({ ...prev, price: e.target.value }))}
-                      className="w-full px-4 py-3 bg-gray-900/80 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
-                      placeholder="e.g., ₹2.5 Cr"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Area</label>
-                    <input
-                      type="text"
-                      required
-                      value={uploadFormData.area}
-                      onChange={(e) => setUploadFormData(prev => ({ ...prev, area: e.target.value }))}
-                      className="w-full px-4 py-3 bg-gray-900/80 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
-                      placeholder="e.g., 3 cent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Location</label>
-                    <input
-                      type="text"
-                      required
-                      value={uploadFormData.location}
-                      onChange={(e) => setUploadFormData(prev => ({ ...prev, location: e.target.value }))}
-                      className="w-full px-4 py-3 bg-gray-900/80 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
-                      placeholder="e.g., Jubilee Hills, Hyderabad"
-                    />
-                  </div>
-                </div>
-
-                {/* Description */}
-                <div>
-                  <label className="block text-sm font-medium mb-2">Description</label>
-                  <textarea
-                    required
-                    rows={4}
-                    value={uploadFormData.description}
-                    onChange={(e) => setUploadFormData(prev => ({ ...prev, description: e.target.value }))}
-                    className="w-full px-4 py-3 bg-gray-900/80 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white resize-none"
-                    placeholder="Describe the property in detail..."
-                  />
-                </div>
-
-                {/* Contact Details */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Contact Name</label>
-                    <input
-                      type="text"
-                      required
-                      value={uploadFormData.contact_name}
-                      onChange={(e) => setUploadFormData(prev => ({ ...prev, contact_name: e.target.value }))}
-                      className="w-full px-4 py-3 bg-gray-900/80 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
-                      placeholder="Contact person name"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Phone</label>
-                    <input
-                      type="tel"
-                      required
-                      value={uploadFormData.contact_phone}
-                      onChange={(e) => setUploadFormData(prev => ({ ...prev, contact_phone: e.target.value }))}
-                      className="w-full px-4 py-3 bg-gray-900/80 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
-                      placeholder="+91 1234567890"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Email</label>
-                    <input
-                      type="email"
-                      required
-                      value={uploadFormData.contact_email}
-                      onChange={(e) => setUploadFormData(prev => ({ ...prev, contact_email: e.target.value }))}
-                      className="w-full px-4 py-3 bg-gray-900/80 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
-                      placeholder="contact@email.com"
-                    />
-                  </div>
-                </div>
-
-                {/* Image Upload */}
-                <div>
-                  <label className="block text-sm font-medium mb-2">Property Images (Max 5)</label>
-                  <div className="border-2 border-dashed border-red-600/30 rounded-lg p-6 text-center hover:border-red-400 transition-colors">
-                    <input
-                      type="file"
-                      multiple
-                      accept="image/*"
-                      onChange={handleUploadImageChange}
-                      className="hidden"
-                      id="admin-image-upload"
-                    />
-                    <label htmlFor="admin-image-upload" className="cursor-pointer">
-                      <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-300">Click to upload images or drag and drop</p>
-                      <p className="text-sm text-gray-500 mt-2">PNG, JPG, GIF up to 10MB each</p>
-                    </label>
-                  </div>
-
-                  {/* Image Previews */}
-                  {uploadImagePreviews.length > 0 && (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mt-4">
-                      {uploadImagePreviews.map((preview, index) => (
-                        <div key={index} className="relative">
-                          <img
-                            src={preview}
-                            alt={`Preview ${index + 1}`}
-                            className="w-full h-24 object-cover rounded-lg"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeUploadImage(index)}
-                            className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full p-1 hover:bg-red-700"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Submit Button */}
-                <div className="flex space-x-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowUploadForm(false)}
-                    className="flex-1 py-4 px-6 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-semibold transition-all duration-300"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={uploadLoading}
-                    className="flex-1 py-4 px-6 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg font-semibold transition-all duration-300"
-                  >
-                    {uploadLoading ? 'Uploading...' : 'Add Property (Auto-Approved)'}
-                  </button>
-                </div>
-              </form>
+      {/* View Details Modal */}
+      {viewingProperty && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-gray-900 to-red-950/50 rounded-2xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-red-600/30">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-white">Property Details</h2>
+              <button
+                onClick={() => setViewingProperty(null)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
             </div>
-          </div>
-        </div>
-      )}
 
-      {/* Property Detail Modal */}
-      {selectedProperty && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-gradient-to-br from-gray-900 to-red-950/50 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-red-600/30">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-white">Property Details</h2>
-                <button
-                  onClick={() => setSelectedProperty(null)}
-                  className="text-gray-400 hover:text-white transition-colors"
-                >
-                  <X className="h-6 w-6" />
-                </button>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Images */}
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-4">Images</h3>
+                <div className="space-y-4">
+                  {viewingProperty.images && viewingProperty.images.length > 0 ? (
+                    viewingProperty.images.map((image, index) => (
+                      <img
+                        key={index}
+                        src={image}
+                        alt={`Property ${index + 1}`}
+                        className="w-full h-48 object-cover rounded-lg"
+                      />
+                    ))
+                  ) : (
+                    <img
+                      src="https://images.pexels.com/photos/1396122/pexels-photo-1396122.jpeg?auto=compress&cs=tinysrgb&w=800"
+                      alt="Default property"
+                      className="w-full h-48 object-cover rounded-lg"
+                    />
+                  )}
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Property Images */}
+              {/* Details */}
+              <div className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-semibold text-white mb-4">Images</h3>
-                  <div className="space-y-4">
-                    {selectedProperty.images && selectedProperty.images.length > 0 ? (
-                      selectedProperty.images.map((image, index) => (
-                        <img
-                          key={index}
-                          src={image}
-                          alt={`Property ${index + 1}`}
-                          className="w-full h-48 object-cover rounded-lg"
-                        />
-                      ))
-                    ) : (
-                      <div className="w-full h-48 bg-gray-800 rounded-lg flex items-center justify-center">
-                        <span className="text-gray-400">No images uploaded</span>
+                  <h3 className="text-lg font-semibold text-white mb-4">Basic Information</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center">
+                      <Home className="h-5 w-5 text-red-400 mr-3" />
+                      <div>
+                        <span className="text-gray-400 text-sm">Title:</span>
+                        <p className="text-white font-medium">{viewingProperty.title}</p>
                       </div>
-                    )}
+                    </div>
+                    <div className="flex items-center">
+                      <Building className="h-5 w-5 text-red-400 mr-3" />
+                      <div>
+                        <span className="text-gray-400 text-sm">Type:</span>
+                        <p className="text-white font-medium capitalize">{viewingProperty.property_type}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center">
+                      <IndianRupee className="h-5 w-5 text-red-400 mr-3" />
+                      <div>
+                        <span className="text-gray-400 text-sm">Price:</span>
+                        <p className="text-white font-medium">{viewingProperty.price}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center">
+                      <Ruler className="h-5 w-5 text-red-400 mr-3" />
+                      <div>
+                        <span className="text-gray-400 text-sm">Area:</span>
+                        <p className="text-white font-medium">{viewingProperty.area}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center">
+                      <MapPin className="h-5 w-5 text-red-400 mr-3" />
+                      <div>
+                        <span className="text-gray-400 text-sm">Location:</span>
+                        <p className="text-white font-medium">{viewingProperty.location}</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                {/* Property Information */}
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-lg font-semibold text-white mb-4">Property Information</h3>
-                    <div className="space-y-3">
-                      <div>
-                        <label className="text-gray-400 text-sm">Title</label>
-                        <p className="text-white">{selectedProperty.title}</p>
-                      </div>
-                      <div>
-                        <label className="text-gray-400 text-sm">Type</label>
-                        <p className="text-white capitalize">{selectedProperty.property_type}</p>
-                      </div>
-                      <div>
-                        <label className="text-gray-400 text-sm">Location</label>
-                        <p className="text-white">{selectedProperty.location}</p>
-                      </div>
-                      <div>
-                        <label className="text-gray-400 text-sm">Price</label>
-                        <p className="text-red-400 font-semibold">{selectedProperty.price}</p>
-                      </div>
-                      <div>
-                        <label className="text-gray-400 text-sm">Area</label>
-                        <p className="text-white">{selectedProperty.area}</p>
-                      </div>
-                      <div>
-                        <label className="text-gray-400 text-sm">Description</label>
-                        <p className="text-white">{selectedProperty.description}</p>
-                      </div>
+                <div>
+                  <h4 className="text-md font-semibold text-white mb-2">Description</h4>
+                  <p className="text-gray-300 leading-relaxed">{viewingProperty.description}</p>
+                </div>
+
+                <div>
+                  <h4 className="text-md font-semibold text-white mb-3">Contact Information</h4>
+                  <div className="space-y-2">
+                    <div className="flex items-center">
+                      <User className="h-4 w-4 text-red-400 mr-3" />
+                      <span className="text-gray-300">{viewingProperty.contact_name}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <Phone className="h-4 w-4 text-red-400 mr-3" />
+                      <span className="text-gray-300">{viewingProperty.contact_phone}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <Mail className="h-4 w-4 text-red-400 mr-3" />
+                      <span className="text-gray-300">{viewingProperty.contact_email}</span>
                     </div>
                   </div>
+                </div>
 
-                  <div>
-                    <h3 className="text-lg font-semibold text-white mb-4">Contact Information</h3>
-                    <div className="space-y-3">
-                      <div className="flex items-center space-x-3">
-                        <User className="h-4 w-4 text-red-400" />
-                        <span className="text-white">{selectedProperty.contact_name}</span>
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        <Phone className="h-4 w-4 text-red-400" />
-                        <span className="text-white">{selectedProperty.contact_phone}</span>
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        <Mail className="h-4 w-4 text-red-400" />
-                        <span className="text-white">{selectedProperty.contact_email}</span>
+                <div>
+                  <h4 className="text-md font-semibold text-white mb-3">Status & Timestamps</h4>
+                  <div className="space-y-2">
+                    <div className="flex items-center">
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(viewingProperty.status)}`}>
+                        {viewingProperty.status.charAt(0).toUpperCase() + viewingProperty.status.slice(1)}
+                      </span>
+                    </div>
+                    <div className="flex items-center">
+                      <Calendar className="h-4 w-4 text-red-400 mr-3" />
+                      <div>
+                        <span className="text-gray-400 text-sm">Created:</span>
+                        <p className="text-gray-300 text-sm">{formatDate(viewingProperty.created_at)}</p>
                       </div>
                     </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-lg font-semibold text-white mb-4">Status & Dates</h3>
-                    <div className="space-y-3">
+                    <div className="flex items-center">
+                      <Calendar className="h-4 w-4 text-red-400 mr-3" />
                       <div>
-                        <label className="text-gray-400 text-sm">Status</label>
-                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ml-2 ${getStatusColor(selectedProperty.status)}`}>
-                          {selectedProperty.status.charAt(0).toUpperCase() + selectedProperty.status.slice(1)}
-                        </span>
-                      </div>
-                      <div>
-                        <label className="text-gray-400 text-sm">Submitted</label>
-                        <p className="text-white">{formatDate(selectedProperty.created_at)}</p>
-                      </div>
-                      <div>
-                        <label className="text-gray-400 text-sm">Last Updated</label>
-                        <p className="text-white">{formatDate(selectedProperty.updated_at)}</p>
+                        <span className="text-gray-400 text-sm">Updated:</span>
+                        <p className="text-gray-300 text-sm">{formatDate(viewingProperty.updated_at)}</p>
                       </div>
                     </div>
-                  </div>
-
-                  {/* Action Buttons */}
-                  {selectedProperty.status === 'pending' && (
-                    <div className="flex space-x-4">
-                      <button
-                        onClick={() => updatePropertyStatus(selectedProperty.id, 'approved')}
-                        className="flex-1 py-3 px-4 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-all duration-300 flex items-center justify-center space-x-2"
-                      >
-                        <Check className="h-5 w-5" />
-                        <span>Approve Property</span>
-                      </button>
-                      <button
-                        onClick={() => updatePropertyStatus(selectedProperty.id, 'rejected')}
-                        className="flex-1 py-3 px-4 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-all duration-300 flex items-center justify-center space-x-2"
-                      >
-                        <X className="h-5 w-5" />
-                        <span>Reject Property</span>
-                      </button>
-                    </div>
-                  )}
-                  
-                  {/* Delete Button in Modal */}
-                  <div className="mt-4 pt-4 border-t border-red-600/30">
-                    <button
-                      onClick={() => deleteProperty(selectedProperty.id, selectedProperty.title)}
-                      className="w-full py-3 px-4 bg-red-800 hover:bg-red-900 text-white rounded-lg font-semibold transition-all duration-300 flex items-center justify-center space-x-2 border border-red-600"
-                    >
-                      <Trash2 className="h-5 w-5" />
-                      <span>Delete Property</span>
-                    </button>
                   </div>
                 </div>
               </div>
