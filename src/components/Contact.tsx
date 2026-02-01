@@ -108,7 +108,7 @@ const Contact = () => {
                 <Mail className="h-6 w-6 text-red-400 flex-shrink-0 mt-1" />
                 <div>
                   <div className="font-medium">Email</div>
-                  <div className="text-gray-300"><a href="mailto:ayyavu.ayyavupromoters@gmail.com">ayyavu.ayyavupromoters@gmail.com </a></div>
+                  <div className="text-gray-300"><a href="mailto:ayyavu.ayyavuconstruction@gmail.com">ayyavu.ayyavuconstruction@gmail.com </a></div>
                 
                 </div>
               </div>
