@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, CreditCard as Edit, Trash2, Save, X, Eye, MapPin, Home, Ruler, Phone, Mail, User, IndianRupee, Building, Calendar } from 'lucide-react';
+import { ArrowLeft, CreditCard as Edit, Trash2, Save, X, Eye, MapPin, Home, Ruler, Phone, Mail, User, IndianRupee, Building, Calendar, Plus, Upload } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { PropertyListing } from '../lib/supabase';
 
@@ -11,6 +11,21 @@ const AdminPanel = () => {
   const [editingProperty, setEditingProperty] = useState<PropertyListing | null>(null);
   const [viewingProperty, setViewingProperty] = useState<PropertyListing | null>(null);
   const [editFormData, setEditFormData] = useState<Partial<PropertyListing>>({});
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addFormData, setAddFormData] = useState({
+    title: '',
+    description: '',
+    price: '',
+    area: '',
+    location: '',
+    property_type: 'residential' as 'residential' | 'commercial',
+    contact_name: '',
+    contact_phone: '',
+    contact_email: ''
+  });
+  const [addImages, setAddImages] = useState<File[]>([]);
+  const [addImagePreviews, setAddImagePreviews] = useState<string[]>([]);
+  const [addSubmitLoading, setAddSubmitLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
 
   // Simple password protection - you can change this password
@@ -128,6 +143,93 @@ const AdminPanel = () => {
     }
   };
 
+  const handleAddImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length + addImages.length > 5) {
+      alert('Maximum 5 images allowed');
+      return;
+    }
+
+    setAddImages(prev => [...prev, ...files]);
+    
+    // Create previews
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setAddImagePreviews(prev => [...prev, e.target?.result as string]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeAddImage = (index: number) => {
+    setAddImages(prev => prev.filter((_, i) => i !== index));
+    setAddImagePreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleAddProperty = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    setAddSubmitLoading(true);
+    try {
+      // Upload images to Supabase storage
+      const imageUrls: string[] = [];
+      for (const image of addImages) {
+        const fileName = `${Date.now()}-${image.name}`;
+        const { data, error } = await supabase.storage
+          .from('property-images')
+          .upload(fileName, image);
+        
+        if (error) throw error;
+        
+        const { data: { publicUrl } } = supabase.storage
+          .from('property-images')
+          .getPublicUrl(fileName);
+        
+        imageUrls.push(publicUrl);
+      }
+
+      // Insert property listing with approved status
+      const { data, error } = await supabase
+        .from('property_listings')
+        .insert({
+          ...addFormData,
+          images: imageUrls,
+          user_id: null,
+          status: 'approved' // Automatically approved when added by admin
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Add to properties list
+      setProperties(prev => [data, ...prev]);
+
+      alert('Property added successfully and is now live on the website!');
+      
+      // Reset form
+      setAddFormData({
+        title: '',
+        description: '',
+        price: '',
+        area: '',
+        location: '',
+        property_type: 'residential',
+        contact_name: '',
+        contact_phone: '',
+        contact_email: ''
+      });
+      setAddImages([]);
+      setAddImagePreviews([]);
+      setShowAddModal(false);
+    } catch (error: any) {
+      alert('Error adding property: ' + error.message);
+    } finally {
+      setAddSubmitLoading(false);
+    }
+  };
+
   const getFilteredProperties = () => {
     if (activeTab === 'all') return properties;
     return properties.filter(property => property.status === activeTab);
@@ -229,6 +331,13 @@ const AdminPanel = () => {
               <div className="text-sm text-gray-300">
                 {properties.length} Properties
               </div>
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="bg-green-600 hover:bg-transparent hover:border-2 hover:border-green-400 hover:text-green-400 text-white px-4 py-2 rounded-lg font-medium transition-all duration-300 hover:scale-105 flex items-center space-x-2"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Add Property</span>
+              </button>
               <button
                 onClick={() => setIsAuthenticated(false)}
                 className="text-sm text-red-400 hover:text-red-300 transition-colors"
@@ -513,6 +622,235 @@ const AdminPanel = () => {
                 Save Changes
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Property Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-gray-900 to-red-950/50 rounded-2xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-red-600/30">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-white">Add New Property</h2>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddProperty} className="space-y-6">
+              {/* Property Type */}
+              <div>
+                <label className="block text-sm font-medium mb-2 text-white">Property Type</label>
+                <div className="flex justify-center">
+                  <div className="bg-black/5 backdrop-blur-md rounded-full border border-white/5 p-2">
+                    <div className="flex space-x-2">
+                      <button
+                        type="button"
+                        onClick={() => setAddFormData(prev => ({ ...prev, property_type: 'residential' }))}
+                        className={`px-6 py-3 rounded-full font-medium transition-all duration-300 ${
+                          addFormData.property_type === 'residential'
+                            ? 'bg-red-600 text-white shadow-lg'
+                            : 'text-white/70 hover:text-white hover:bg-white/10'
+                        }`}
+                      >
+                        Residential
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAddFormData(prev => ({ ...prev, property_type: 'commercial' }))}
+                        className={`px-6 py-3 rounded-full font-medium transition-all duration-300 ${
+                          addFormData.property_type === 'commercial'
+                            ? 'bg-red-600 text-white shadow-lg'
+                            : 'text-white/70 hover:text-white hover:bg-white/10'
+                        }`}
+                      >
+                        Commercial
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Basic Details */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-white">Property Title</label>
+                  <input
+                    type="text"
+                    required
+                    value={addFormData.title}
+                    onChange={(e) => setAddFormData(prev => ({ ...prev, title: e.target.value }))}
+                    className="w-full px-4 py-3 bg-gray-800 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
+                    placeholder="e.g., Premium Residential Plot"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-white">Price</label>
+                  <div className="relative">
+                    <IndianRupee className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <input
+                      type="text"
+                      required
+                      value={addFormData.price}
+                      onChange={(e) => setAddFormData(prev => ({ ...prev, price: e.target.value }))}
+                      className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
+                      placeholder="e.g., ₹2.5 Cr"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-white">Area</label>
+                  <input
+                    type="text"
+                    required
+                    value={addFormData.area}
+                    onChange={(e) => setAddFormData(prev => ({ ...prev, area: e.target.value }))}
+                    className="w-full px-4 py-3 bg-gray-800 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
+                    placeholder="e.g., 3 cent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-white">Location</label>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <input
+                      type="text"
+                      required
+                      value={addFormData.location}
+                      onChange={(e) => setAddFormData(prev => ({ ...prev, location: e.target.value }))}
+                      className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
+                      placeholder="e.g., Jubilee Hills, Hyderabad"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium mb-2 text-white">Description</label>
+                <textarea
+                  required
+                  rows={4}
+                  value={addFormData.description}
+                  onChange={(e) => setAddFormData(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full px-4 py-3 bg-gray-800 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white resize-none"
+                  placeholder="Describe the property in detail..."
+                />
+              </div>
+
+              {/* Contact Details */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-white">Contact Name</label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <input
+                      type="text"
+                      required
+                      value={addFormData.contact_name}
+                      onChange={(e) => setAddFormData(prev => ({ ...prev, contact_name: e.target.value }))}
+                      className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
+                      placeholder="Contact person name"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-white">Phone</label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <input
+                      type="tel"
+                      required
+                      value={addFormData.contact_phone}
+                      onChange={(e) => setAddFormData(prev => ({ ...prev, contact_phone: e.target.value }))}
+                      className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
+                      placeholder="+91 1234567890"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-white">Email</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                    <input
+                      type="email"
+                      required
+                      value={addFormData.contact_email}
+                      onChange={(e) => setAddFormData(prev => ({ ...prev, contact_email: e.target.value }))}
+                      className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
+                      placeholder="contact@email.com"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Image Upload */}
+              <div>
+                <label className="block text-sm font-medium mb-2 text-white">Property Images (Max 5)</label>
+                <div className="border-2 border-dashed border-red-600/30 rounded-lg p-6 text-center hover:border-red-400 transition-colors">
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleAddImageUpload}
+                    className="hidden"
+                    id="add-image-upload"
+                  />
+                  <label htmlFor="add-image-upload" className="cursor-pointer">
+                    <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-300">Click to upload images or drag and drop</p>
+                    <p className="text-sm text-gray-500 mt-2">PNG, JPG, GIF up to 10MB each</p>
+                  </label>
+                </div>
+
+                {/* Image Previews */}
+                {addImagePreviews.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mt-4">
+                    {addImagePreviews.map((preview, index) => (
+                      <div key={index} className="relative">
+                        <img
+                          src={preview}
+                          alt={`Preview ${index + 1}`}
+                          className="w-full h-24 object-cover rounded-lg"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeAddImage(index)}
+                          className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full p-1 hover:bg-red-700"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Submit Button */}
+              <div className="flex justify-end space-x-4">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="px-6 py-3 border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={addSubmitLoading}
+                  className="px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:hover:bg-gray-600 text-white rounded-lg font-semibold transition-all duration-300 hover:scale-105 flex items-center space-x-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>{addSubmitLoading ? 'Adding...' : 'Add Property'}</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
