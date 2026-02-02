@@ -11,6 +11,9 @@ const AdminPanel = () => {
   const [editingProperty, setEditingProperty] = useState<PropertyListing | null>(null);
   const [viewingProperty, setViewingProperty] = useState<PropertyListing | null>(null);
   const [editFormData, setEditFormData] = useState<Partial<PropertyListing>>({});
+  const [editImages, setEditImages] = useState<File[]>([]);
+  const [editImagePreviews, setEditImagePreviews] = useState<string[]>([]);
+  const [editExistingImages, setEditExistingImages] = useState<string[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [addFormData, setAddFormData] = useState({
     title: '',
@@ -89,16 +92,70 @@ const AdminPanel = () => {
   const handleEdit = (property: PropertyListing) => {
     setEditingProperty(property);
     setEditFormData(property);
+    setEditExistingImages(property.images || []);
+    setEditImages([]);
+    setEditImagePreviews([]);
+  };
+
+  const handleEditImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const totalImages = editExistingImages.length + editImages.length + files.length;
+    
+    if (totalImages > 5) {
+      alert('Maximum 5 images allowed');
+      return;
+    }
+
+    setEditImages(prev => [...prev, ...files]);
+    
+    // Create previews
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setEditImagePreviews(prev => [...prev, e.target?.result as string]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeEditExistingImage = (index: number) => {
+    setEditExistingImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const removeEditNewImage = (index: number) => {
+    setEditImages(prev => prev.filter((_, i) => i !== index));
+    setEditImagePreviews(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSaveEdit = async () => {
     if (!editingProperty || !editFormData) return;
 
     try {
+      // Upload new images to Supabase storage
+      const newImageUrls: string[] = [];
+      for (const image of editImages) {
+        const fileName = `${Date.now()}-${image.name}`;
+        const { data, error } = await supabase.storage
+          .from('property-images')
+          .upload(fileName, image);
+        
+        if (error) throw error;
+        
+        const { data: { publicUrl } } = supabase.storage
+          .from('property-images')
+          .getPublicUrl(fileName);
+        
+        newImageUrls.push(publicUrl);
+      }
+
+      // Combine existing images with new ones
+      const allImages = [...editExistingImages, ...newImageUrls];
+
       const { error } = await supabase
         .from('property_listings')
         .update({
           ...editFormData,
+          images: allImages,
           updated_at: new Date().toISOString()
         })
         .eq('id', editingProperty.id);
@@ -108,13 +165,16 @@ const AdminPanel = () => {
       setProperties(prev =>
         prev.map(prop =>
           prop.id === editingProperty.id
-            ? { ...prop, ...editFormData, updated_at: new Date().toISOString() }
+            ? { ...prop, ...editFormData, images: allImages, updated_at: new Date().toISOString() }
             : prop
         )
       );
 
       setEditingProperty(null);
       setEditFormData({});
+      setEditImages([]);
+      setEditImagePreviews([]);
+      setEditExistingImages([]);
       alert('Property updated successfully!');
     } catch (error) {
       console.error('Error updating property:', error);
@@ -604,6 +664,80 @@ const AdminPanel = () => {
                     className="w-full px-4 py-3 bg-gray-800 border border-red-600/30 rounded-lg focus:outline-none focus:border-red-400 text-white"
                   />
                 </div>
+              </div>
+
+              {/* Image Management */}
+              <div>
+                <label className="block text-sm font-medium mb-2 text-white">Property Images</label>
+                
+                {/* Existing Images */}
+                {editExistingImages.length > 0 && (
+                  <div className="mb-4">
+                    <h4 className="text-sm text-gray-300 mb-2">Current Images</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                      {editExistingImages.map((image, index) => (
+                        <div key={index} className="relative">
+                          <img
+                            src={image}
+                            alt={`Current ${index + 1}`}
+                            className="w-full h-24 object-cover rounded-lg"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeEditExistingImage(index)}
+                            className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full p-1 hover:bg-red-700"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* New Images Upload */}
+                <div className="border-2 border-dashed border-red-600/30 rounded-lg p-6 text-center hover:border-red-400 transition-colors">
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleEditImageUpload}
+                    className="hidden"
+                    id="edit-image-upload"
+                  />
+                  <label htmlFor="edit-image-upload" className="cursor-pointer">
+                    <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-gray-300 text-sm">Add new images</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Current: {editExistingImages.length + editImages.length}/5 images
+                    </p>
+                  </label>
+                </div>
+
+                {/* New Image Previews */}
+                {editImagePreviews.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="text-sm text-gray-300 mb-2">New Images to Add</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                      {editImagePreviews.map((preview, index) => (
+                        <div key={index} className="relative">
+                          <img
+                            src={preview}
+                            alt={`New ${index + 1}`}
+                            className="w-full h-24 object-cover rounded-lg border-2 border-green-400/50"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeEditNewImage(index)}
+                            className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full p-1 hover:bg-red-700"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
