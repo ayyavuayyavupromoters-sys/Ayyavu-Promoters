@@ -11,6 +11,7 @@ const AdminPanel = () => {
   const [editingProperty, setEditingProperty] = useState<PropertyListing | null>(null);
   const [viewingProperty, setViewingProperty] = useState<PropertyListing | null>(null);
   const [editFormData, setEditFormData] = useState<Partial<PropertyListing>>({});
+  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
 
   // Simple password protection - you can change this password
   const ADMIN_PASSWORD = 'admin123';
@@ -127,6 +128,16 @@ const AdminPanel = () => {
     }
   };
 
+  const getFilteredProperties = () => {
+    if (activeTab === 'all') return properties;
+    return properties.filter(property => property.status === activeTab);
+  };
+
+  const getTabCount = (status: 'all' | 'pending' | 'approved' | 'rejected') => {
+    if (status === 'all') return properties.length;
+    return properties.filter(property => property.status === status).length;
+  };
+
   const handleBackClick = () => {
     window.history.back();
   };
@@ -229,16 +240,53 @@ const AdminPanel = () => {
         </div>
       </div>
 
+      {/* Status Tabs */}
+      <div className="bg-black/10 backdrop-blur-md border-b border-white/5">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex space-x-1 py-4">
+            {[
+              { key: 'all', label: 'All Properties', count: getTabCount('all') },
+              { key: 'pending', label: 'Pending', count: getTabCount('pending') },
+              { key: 'approved', label: 'Approved', count: getTabCount('approved') },
+              { key: 'rejected', label: 'Rejected', count: getTabCount('rejected') }
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key as any)}
+                className={`px-6 py-3 rounded-full font-medium transition-all duration-300 hover:scale-105 flex items-center space-x-2 ${
+                  activeTab === tab.key
+                    ? 'bg-red-600 text-white shadow-lg'
+                    : 'text-white/70 hover:text-white hover:bg-white/10'
+                }`}
+              >
+                <span>{tab.label}</span>
+                <span className={`px-2 py-1 rounded-full text-xs font-bold ${
+                  activeTab === tab.key
+                    ? 'bg-white/20 text-white'
+                    : 'bg-white/10 text-white/60'
+                }`}>
+                  {tab.count}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Properties List */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {properties.length === 0 ? (
+        {getFilteredProperties().length === 0 ? (
           <div className="text-center py-12">
-            <div className="text-white text-xl">No properties found</div>
-            <p className="text-gray-400 mt-2">Properties will appear here once submitted</p>
+            <div className="text-white text-xl">
+              {activeTab === 'all' ? 'No properties found' : `No ${activeTab} properties found`}
+            </div>
+            <p className="text-gray-400 mt-2">
+              {activeTab === 'all' ? 'Properties will appear here once submitted' : `No properties with ${activeTab} status`}
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {properties.map((property) => (
+            {getFilteredProperties().map((property) => (
               <div 
                 key={property.id}
                 className="bg-gradient-to-br from-gray-900/80 to-red-950/30 rounded-2xl overflow-hidden border border-red-600/30 hover:border-red-400 transition-all duration-300 backdrop-blur-sm"
@@ -256,7 +304,11 @@ const AdminPanel = () => {
                     </span>
                   </div>
                   <div className="absolute top-4 left-4">
-                    <span className="bg-black/60 text-white px-3 py-1 rounded-full text-xs font-medium flex items-center">
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium flex items-center ${
+                      property.property_type === 'residential' 
+                        ? 'bg-blue-600/80 text-white' 
+                        : 'bg-purple-600/80 text-white'
+                    }`}>
                       {property.property_type === 'residential' ? <Home className="h-3 w-3 mr-1" /> : <Building className="h-3 w-3 mr-1" />}
                       {property.property_type === 'residential' ? 'Residential' : 'Commercial'}
                     </span>
