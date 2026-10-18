@@ -95,7 +95,7 @@ const SellProperty = () => {
       
       // Redirect to properties page after successful submission
       setTimeout(() => {
-        window.location.href = '/properties';
+        window.location.hash = '#/properties';
       }, 2000);
     } catch (error: any) {
       alert('Error submitting property: ' + error.message);
